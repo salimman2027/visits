@@ -144,6 +144,7 @@ details summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
   <button data-tab="users">المناديب</button>
   <button data-tab="teams">الفرق</button>
   <button data-tab="settings">الإعدادات</button>
+  <button id="chpw" hidden>كلمة السر</button>
   <button id="logout" hidden>خروج</button>
 </nav>
 
@@ -817,7 +818,7 @@ function enableSR(){if(SR&&!inClaude){vKind='sr';document.body.classList.remove(
 const AK='fv-tok';
 function showLogin(){if($('login'))return;const d=document.createElement('div');d.id='login';d.style.cssText='position:fixed;inset:0;z-index:99;background:var(--bg);display:grid;place-items:center;padding:16px';
   d.innerHTML='<div class="slip" style="width:min(380px,100%)"><h2>تسجيل الدخول</h2><div class="f"><label>اسم المستخدم</label><input id="lU" dir="ltr" autocomplete="username"></div><div class="f"><label>كلمة السر</label><div class="row"><input id="lP" type="password" dir="ltr" autocomplete="current-password"><button type="button" class="btn" id="lEye" aria-label="إظهار كلمة السر" style="min-width:52px;font-size:20px">👁</button></div></div><button class="btn pri full" id="lGo">دخول</button><div class="hint" id="lMsg"></div></div>';document.body.appendChild(d);
-  const go=async()=>{try{const r=await fetch('api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({u:$('lU').value,p:$('lP').value})});if(!r.ok){$('lMsg').textContent=r.status===429?'محاولات كتير، جرّب بعد شوية':'بيانات الدخول غلط';return}
+  const go=async()=>{try{if($('lP').value==='admin'||$('lP').value==='Demo@1234')lsSet('fv-warn',1);const r=await fetch('api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({u:$('lU').value,p:$('lP').value})});if(!r.ok){$('lMsg').textContent=r.status===429?'محاولات كتير، جرّب بعد شوية':'بيانات الدخول غلط';return}
     const j=await r.json();lsSet(AK,j.token);lsSet('fv-me2',{role:j.role,repId:j.repId});if(j.repId)lsSet('fv-me',j.repId);location.reload()}catch{$('lMsg').textContent='تعذّر الاتصال'}};
   $('lEye').onclick=()=>{const s=$('lP').type==='password';$('lP').type=s?'text':'password';$('lEye').textContent=s?'🙈':'👁'};$('lGo').onclick=go;$('lP').addEventListener('keydown',e=>{if(e.key==='Enter')go()})}
 async function api(method,path,body){
@@ -840,7 +841,8 @@ function makeApiDb(){
       onSnapshot:(ok,err)=>sub(d=>({exists:!!d.settings,data:()=>d.settings}),ok,err),
       set:b=>api('PUT',c+'/'+encodeURIComponent(id),b),
       delete:()=>api('DELETE',c+'/'+encodeURIComponent(id))}}}}
-function applyRole(){$('logout').hidden=false;$('logout').onclick=()=>{localStorage.removeItem(AK);localStorage.removeItem('fv-me2');location.reload()};
+function applyRole(){$('logout').hidden=false;$('chpw').hidden=false;if(lsGet('fv-warn',0)){localStorage.removeItem('fv-warn');setTimeout(()=>toast('كلمة السر افتراضية، غيّرها من زر كلمة السر',1),800)}
+  $('chpw').onclick=async()=>{const o=prompt('كلمة السر الحالية');if(!o)return;const n=prompt('كلمة السر الجديدة (٦ حروف على الأقل)');if(!n)return;try{await api('POST','password',{old:o,new:n});toast('تم تغيير كلمة السر')}catch{toast('كلمة السر الحالية غلط أو الجديدة قصيرة',1)}};$('logout').onclick=()=>{localStorage.removeItem(AK);localStorage.removeItem('fv-me2');location.reload()};
   if(ME.role==='rep'){['dash','clients','plan','users','teams','settings'].forEach(x=>document.querySelector('#tabs [data-tab="'+x+'"]').hidden=true);
     const o=repOptions;repOptions=function(s,all){o(s,all);s.value=ME.repId;s.disabled=true}}}
 let USERS=[];async function loadUsers(){try{USERS=await api('GET','users');renderUsers()}catch{}}

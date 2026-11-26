@@ -40,3 +40,5 @@ CREATE TABLE dbo.Users(
   Role nvarchar(10) NOT NULL, RepId nvarchar(100) NULL, Active bit NOT NULL DEFAULT 1);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='UX_Users_Username')
   CREATE UNIQUE INDEX UX_Users_Username ON dbo.Users(Username);
+
+IF COL_LENGTH('dbo.Users','Changed') IS NULL ALTER TABLE dbo.Users ADD Changed bit NOT NULL DEFAULT 0;

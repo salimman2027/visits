@@ -34,11 +34,11 @@ try
     var sql = await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath, "db", "schema.sql"));
     await using var cmd = new SqlCommand(sql, c);
     await cmd.ExecuteNonQueryAsync();
-    // أول تشغيل: مستخدم admin بكلمة سر = AccessCode القديم
-    await using var adm = new SqlCommand("IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Id='admin') INSERT dbo.Users(Id,Username,Hash,Role,Active) VALUES('admin','admin',@h,'admin',1) ELSE IF @force=1 UPDATE dbo.Users SET Hash=@h, Active=1 WHERE Id='admin'", c);
-    // لو AccessCode محدد في الإعدادات، يبقى هو كلمة سر admin دايماً (للاسترجاع: غيّره واعمل restart)
-    adm.Parameters.AddWithValue("@force", accessCode.Length > 0 ? 1 : 0);
-    adm.Parameters.AddWithValue("@h", HashPw(accessCode.Length > 0 ? accessCode : Guid.NewGuid().ToString("N")));
+    // admin / admin افتراضي. بيتغير لأول مرة من زر "كلمة السر" في الصفحة، وبعدها ما بيتلمسش
+    await using var adm = new SqlCommand(@"IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Id='admin')
+          INSERT dbo.Users(Id,Username,Hash,Role,Active,Changed) VALUES('admin','admin',@h,'admin',1,0)
+        ELSE UPDATE dbo.Users SET Hash=@h, Active=1 WHERE Id='admin' AND Changed=0", c);
+    adm.Parameters.AddWithValue("@h", HashPw("admin"));
     await adm.ExecuteNonQueryAsync();
 }
 catch (Exception ex) { app.Logger.LogError(ex, "Database init failed"); }
@@ -89,7 +89,7 @@ app.Use(async (ctx, next) =>
                 await using var cmd = new SqlCommand("SELECT Role,RepId FROM dbo.Users WHERE Id=@i AND Active=1", c);
                 cmd.Parameters.AddWithValue("@i", f[0]);
                 await using var r = await cmd.ExecuteReaderAsync();
-                if (await r.ReadAsync()) { ctx.Items["role"] = r.GetString(0); ctx.Items["rep"] = r.IsDBNull(1) ? "" : r.GetString(1); await next(); return; }
+                if (await r.ReadAsync()) { ctx.Items["uid"] = f[0]; ctx.Items["role"] = r.GetString(0); ctx.Items["rep"] = r.IsDBNull(1) ? "" : r.GetString(1); await next(); return; }
             }
         }
     }
@@ -129,6 +129,21 @@ app.MapPut("/api/users/{repId}", async (HttpContext ctx, string repId, JsonEleme
         await cmd.ExecuteNonQueryAsync();
     }
     catch (SqlException ex) when (ex.Number is 2601 or 2627) { return Results.Conflict(); }
+    return Results.NoContent();
+});
+
+app.MapPost("/api/password", async (HttpContext ctx, JsonElement b) =>
+{
+    var old = Str(b, "old", 200) ?? ""; var nw = Str(b, "new", 200) ?? "";
+    if (nw.Length < 6) return Results.BadRequest();
+    await using var c = new SqlConnection(cs); await c.OpenAsync();
+    await using var q = new SqlCommand("SELECT Hash FROM dbo.Users WHERE Id=@i", c);
+    q.Parameters.AddWithValue("@i", (string?)ctx.Items["uid"] ?? "");
+    var h = (string?)await q.ExecuteScalarAsync();
+    if (h == null || !CheckPw(old, h)) return Results.Unauthorized();
+    await using var u = new SqlCommand("UPDATE dbo.Users SET Hash=@h, Changed=1 WHERE Id=@i", c);
+    u.Parameters.AddWithValue("@h", HashPw(nw)); u.Parameters.AddWithValue("@i", (string?)ctx.Items["uid"] ?? "");
+    await u.ExecuteNonQueryAsync();
     return Results.NoContent();
 });
 
