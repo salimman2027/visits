@@ -24,6 +24,8 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setGeolocationEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
+        // يشبه Chrome العادي (بعض الاستضافات بتقفل الاتصال لو شافت WebView)
+        s.setUserAgentString(s.getUserAgentString().replace("; wv", "").replaceAll("Version/[0-9.]+ ", ""));
         web.setWebViewClient(new WebViewClient() {
             @Override public void onReceivedError(WebView v, WebResourceRequest r, WebResourceError e) {
                 if (r.isForMainFrame()) {
