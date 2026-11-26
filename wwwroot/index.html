@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>الزيارات الميدانية</title>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#00463c"><link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -140,7 +141,10 @@ details summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
   <button data-tab="rep">زيارات اليوم</button>
   <button data-tab="adhoc">زيارة غير مجدولة</button>
   <button data-tab="report">التقارير</button>
+  <button data-tab="users">المناديب</button>
+  <button data-tab="teams">الفرق</button>
   <button data-tab="settings">الإعدادات</button>
+  <button id="logout" hidden>خروج</button>
 </nav>
 
 <main>
@@ -319,6 +323,12 @@ details summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 </section>
 
 <!-- ============ SETTINGS ============ -->
+<section class="tab" id="t-users"><div class="slip"><h2>المناديب والحسابات</h2>
+  <div class="row"><input id="uName" placeholder="اسم مندوب جديد"><button class="btn pri" id="uAdd">إضافة</button></div>
+  <div id="uList" style="margin-top:12px"></div><div class="hint">لكل مندوب يوزر وكلمة سر (٦ حروف على الأقل). المندوب يشوف زياراته فقط.</div></div></section>
+<section class="tab" id="t-teams"><div class="slip"><h2>فرق المناديب</h2>
+  <div class="row"><input id="tName" placeholder="اسم فريق جديد"><button class="btn pri" id="tAdd">إضافة</button></div>
+  <div id="tList" style="margin-top:12px"></div><div class="hint">عيّن المندوب لفريقه من شاشة المناديب. الأرقام عن خطط اليوم.</div></div></section>
 <section class="tab" id="t-settings">
   <div class="slip">
     <h2>المناديب</h2>
@@ -471,10 +481,11 @@ function applyFinal(text){text=text.trim();if(!text||!target)return;const el=$(t
   el.value=(el.value?el.value.trimEnd()+' ':'')+text;el.dispatchEvent(new Event('input'))}
 
 /* ================= tabs ================= */
-const TABS=['dash','clients','plan','rep','adhoc','report','settings'];
-function show(t){if(!TABS.includes(t))t=S.settings.reps.length&&S.clients.length?'dash':'clients';
+const TABS=['dash','clients','plan','rep','adhoc','report','users','teams','settings'];
+let ME=lsGet('fv-me2',{role:'admin'});
+function show(t){if(ME.role==='rep'&&!['rep','adhoc','report'].includes(t))t='rep';if(!TABS.includes(t))t=S.settings.reps.length&&S.clients.length?'dash':'clients';
   TABS.forEach(x=>$('t-'+x).classList.toggle('on',x===t));document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===t?'page':'false'));
-  if(location.hash!=='#'+t)try{history.replaceState(null,'','#'+t)}catch{};cur=t;renderData();window.scrollTo(0,0)}
+  if(location.hash!=='#'+t)try{history.replaceState(null,'','#'+t)}catch{};cur=t;if(t==='users')loadUsers();renderData();window.scrollTo(0,0)}
 let cur='';
 $('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)show(b.dataset.tab)});
 addEventListener('hashchange',()=>show(location.hash.slice(1)));
@@ -762,7 +773,7 @@ $('sSave').addEventListener('click',()=>{S.settings.title=$('sTitle').value.trim
 $('sOfficeHere').addEventListener('click',async()=>{try{const h=await here();$('sOffice').value=h[0].toFixed(6)+', '+h[1].toFixed(6)}catch{msg('setMsg',geoFail,1)}});
 $('backup').addEventListener('click',()=>copy(JSON.stringify({clients:S.clients,plans:S.plans,visits:S.visits,settings:S.settings}),$('backup'),'نسخ نسخة احتياطية'));
 function demoData(){const T=iso(today()),Y=iso(addD(-1)),TM=iso(addD(1));
-  const reps=[{id:'rep_ahmed',name:'أحمد سالم',email:'ahmed@example.com'},{id:'rep_mohamed',name:'محمد العتيبي',email:'mohamed@example.com'},{id:'rep_khaled',name:'خالد الشهري',email:'khaled@example.com'}];
+  const reps=[{id:'rep_ahmed',name:'أحمد سالم',email:'ahmed@example.com',team:'team_n'},{id:'rep_mohamed',name:'محمد العتيبي',email:'mohamed@example.com',team:'team_n'},{id:'rep_khaled',name:'خالد الشهري',email:'khaled@example.com',team:'team_s'}];
   const C=[['سوبر ماركت الريم','0551112233','حي الملقا',24.8090,46.6110,'تجزئة',45],['شركة البناء المتقدم','0552223344','حي النرجس',24.8620,46.6560,'مقاولات',220],['مطعم بيت الشاورما','0553334455','حي الياسمين',24.8235,46.6440,'مطاعم',12],['مستودعات الشمال','0554445566','حي القيروان',24.8360,46.5810,'لوجستيات',140],['صيدلية الحياة','0555556677','حي الصحافة',24.8050,46.6390,'صحة',8],['مكتبة المعرفة','0556667788','حي حطين',24.7700,46.5980,'تجزئة',15],
   ['مدارس رواد المستقبل','0557778899','حي العارض',24.8800,46.6050,'تعليم',180],['معرض النخبة للسيارات','0558889900','طريق الملك فهد، حي الربيع',24.7930,46.6580,'سيارات',60],['مقهى الصباح','0559990011','حي الندى',24.8120,46.6700,'مطاعم',9],['مجمع عيادات الشفاء','0501231234','حي الغدير',24.7720,46.6600,'صحة',75],['مؤسسة الأفق للمقاولات','0502342345','حي الوادي',24.7880,46.6880,'مقاولات',35],['هايبر الوفرة','0503453456','حي الحمراء',24.7790,46.7520,'تجزئة',260],
   ['مخابز الريف','0504564567','حي القدس',24.7550,46.7300,'مطاعم',22],['شركة النقل السريع','0505675678','حي الروضة',24.7300,46.7700,'لوجستيات',95],['أكاديمية التميز','0506786789','حي النهضة',24.7600,46.8100,'تعليم',40],['صيدلية الدواء الأول','0507897890','حي الريان',24.7050,46.7780,'صحة',11],['ورشة المحرك الذهبي','0508908901','حي السلي',24.6800,46.8000,'سيارات',18],['مطاعم البيك الشرقي','0509019012','حي اليرموك',24.8000,46.7650,'مطاعم',55],
@@ -782,19 +793,19 @@ function demoData(){const T=iso(today()),Y=iso(addD(-1)),TM=iso(addD(1));
   const av=(i,date,st,out,notes,next,nt,nn,k)=>{const c=clients[i];return{id:'demo_v'+k,rep:'rep_ahmed',date,cid:c.id,name:c.name,phone:c.phone,sector:c.sector,size:c.size,loc:c.loc,lat:c.lat,lng:c.lng,status:st,reason:'',outcome:out,notes,next,nextTime:nt,nextNote:nn,conf:{lat:c.lat,lng:c.lng,acc:10,how:'gps',at:Date.now()},savedAt:Date.now()-k*3600000,created:Date.now(),demo:true}};
   const visits=[Object.assign(av(16,T,'done','فرصة مفتوحة','مدير الورشة مهتم جدًا، وافق الشريك على ديمو.',iso(addD(5)),'11:00','اجتماع أونلاين',1),{prio:'عالية',meetOk:true}),Object.assign(av(17,iso(addD(-2)),'done','فرصة مفتوحة','يستخدمون نظام قديم، طلبوا ديمو أونلاين.',iso(addD(-1)),'11:00','موافقة الإدارة وتحديد الديمو',2),{prio:'عالية'}),av(15,iso(addD(-4)),'done','مغلقة','تعاقدوا مع مورد آخر هذا الشهر.','','','',3)];
   visits.forEach(v=>setFollow(clients.find(c=>c.id===v.cid),v.rep,v.date,v));
-  return{clients,visits,plans:{[pY.id]:pY,[pT.id]:pT,[pM.id]:pM,[pK.id]:pK},settings:{reps,to:'sales.manager@example.com',hook:'',office:office.join(', ')}}}
+  return{clients,visits,plans:{[pY.id]:pY,[pT.id]:pT,[pM.id]:pM,[pK.id]:pK},settings:{reps,teams:[{id:'team_n',name:'فريق الشمال'},{id:'team_s',name:'فريق الجنوب'}],to:'sales.manager@example.com',hook:'',office:office.join(', ')}}}
 window.__demo=demoData;
 async function loadDemo(){const d=demoData();d.clients.forEach(c=>{const i=S.clients.findIndex(x=>x.id===c.id);i<0?S.clients.push(c):S.clients[i]=c});Object.assign(S.plans,d.plans);d.visits.forEach(v=>{const i=S.visits.findIndex(x=>x.id===v.id);i<0?S.visits.push(v):S.visits[i]=v});
-  const ids=new Set(S.settings.reps.map(r=>r.id));d.settings.reps.forEach(r=>{if(!ids.has(r.id))S.settings.reps.push(r)});S.settings.to=S.settings.to||d.settings.to;S.settings.office=S.settings.office||d.settings.office;
-  if(db){for(const c of d.clients)await write('clients/'+c.id,c);for(const p of Object.values(d.plans))await write('plans/'+p.id,p);for(const v of d.visits)await write('visits/'+v.id,v);await write('settings/main',S.settings)}else lsSave();
-  lsSet('fv-me','rep_ahmed');$('rRep').value='rep_ahmed';renderData();toast('أضفت بيانات تجريبية: ٢٤ عميل، ٣ مناديب، ٤ خطط، ٣ زيارات غير مجدولة')}
+  const ids=new Set(S.settings.reps.map(r=>r.id));d.settings.reps.forEach(r=>{if(!ids.has(r.id))S.settings.reps.push(r)});S.settings.to=S.settings.to||d.settings.to;if(!(S.settings.teams||[]).length)S.settings.teams=d.settings.teams;S.settings.office=S.settings.office||d.settings.office;
+  if(db){for(const c of d.clients)await write('clients/'+c.id,c);for(const p of Object.values(d.plans))await write('plans/'+p.id,p);for(const v of d.visits)await write('visits/'+v.id,v);await write('settings/main',S.settings);for(const r of d.settings.reps)try{await api('PUT','users/'+r.id,{username:r.id.replace('rep_',''),password:'Demo@1234',active:true})}catch{}}else lsSave();
+  lsSet('fv-me','rep_ahmed');$('rRep').value='rep_ahmed';renderData();toast('أضفت بيانات تجريبية: ٢٤ عميل، ٣ مناديب، ٤ خطط، ٣ زيارات غير مجدولة. حسابات المناديب: ahmed / mohamed / khaled وكلمة السر Demo@1234')}
 async function clearDemo(){const cs=S.clients.filter(c=>c.demo),ps=Object.values(S.plans).filter(p=>p.demo),vs=S.visits.filter(v=>v.demo);S.visits=S.visits.filter(v=>!v.demo);S.clients=S.clients.filter(c=>!c.demo);ps.forEach(p=>delete S.plans[p.id]);S.settings.reps=S.settings.reps.filter(r=>!/^rep_(ahmed|mohamed|khaled)$/.test(r.id));
   if(db){for(const v of vs)await erase('visits/'+v.id);for(const c of cs)await erase('clients/'+c.id);for(const p of ps)await erase('plans/'+p.id);await write('settings/main',S.settings)}else lsSave();renderData();toast('اتمسحت البيانات التجريبية')}
 $('demo').addEventListener('click',loadDemo);$('demoClear').addEventListener('click',clearDemo);
 
 /* ================= render + boot ================= */
 function renderData(){if(cur==='clients')renderClients();else{const secs=[...new Set(S.clients.map(c=>c.sector).filter(Boolean))].sort();fillSel($('pSec'),secs,'كل القطاعات')}
-  if(cur==='dash')renderDash();if(cur==='plan')renderPlan();if(cur==='rep')renderRep();if(cur==='adhoc')renderAdhoc();if(cur==='report')renderReport();if(cur==='settings')renderSettings();renderBadge();
+  if(cur==='dash')renderDash();if(cur==='plan')renderPlan();if(cur==='rep')renderRep();if(cur==='adhoc')renderAdhoc();if(cur==='report')renderReport();if(cur==='settings')renderSettings();if(cur==='users')renderUsers();if(cur==='teams')renderTeams();renderBadge();
   $('sub').textContent=S.clients.length+' عميل مرشح · '+S.settings.reps.length+' مندوب · '+Object.values(S.plans).filter(p=>p.date===iso(today())).reduce((a,p)=>a+p.stops.length,0)+' زيارة اليوم'}
 $('pDate').value=iso(addD(1));$('rDate').value=iso(today());$('xDate').value=iso(today());$('aDate').value=iso(today());
 function loadLocal(){const L=lsGet(LK,null);if(!L&&!lsGet('fv-demo-done',0)){lsSet('fv-demo-done',1);const d=demoData();S.clients=d.clients;S.plans=d.plans;S.visits=d.visits;S.settings=d.settings;lsSave();lsSet('fv-me','rep_ahmed');setTimeout(()=>toast('دي بيانات تجريبية للتجربة — امسحها من الإعدادات'),600)}else if(L){S.clients=L.clients||[];S.plans=L.plans||{};S.visits=L.visits||[];S.settings=Object.assign(S.settings,L.settings||{})}
@@ -803,10 +814,16 @@ function bootAlert(){const t=iso(today()),fl=follows(lsGet('fv-dash','*')),late=
 function enableSR(){if(SR&&!inClaude){vKind='sr';document.body.classList.remove('nomic')}}
 /* ================= SQL Server backend (ASP.NET Core API) =================
    نفس واجهة db بتاعة Claude، بس بتكلّم /api بدل ما تكلّم Claude. */
-const AK='fv-code';
+const AK='fv-tok';
+function showLogin(){if($('login'))return;const d=document.createElement('div');d.id='login';d.style.cssText='position:fixed;inset:0;z-index:99;background:var(--bg);display:grid;place-items:center;padding:16px';
+  d.innerHTML='<div class="slip" style="width:min(380px,100%)"><h2>تسجيل الدخول</h2><div class="f"><label>اسم المستخدم</label><input id="lU" dir="ltr" autocomplete="username"></div><div class="f"><label>كلمة السر</label><input id="lP" type="password" dir="ltr" autocomplete="current-password"></div><button class="btn pri full" id="lGo">دخول</button><div class="hint" id="lMsg"></div></div>';document.body.appendChild(d);
+  const go=async()=>{try{const r=await fetch('api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({u:$('lU').value,p:$('lP').value})});if(!r.ok){$('lMsg').textContent=r.status===429?'محاولات كتير، جرّب بعد شوية':'بيانات الدخول غلط';return}
+    const j=await r.json();lsSet(AK,j.token);lsSet('fv-me2',{role:j.role,repId:j.repId});if(j.repId)lsSet('fv-me',j.repId);location.reload()}catch{$('lMsg').textContent='تعذّر الاتصال'}};
+  $('lGo').onclick=go;$('lP').addEventListener('keydown',e=>{if(e.key==='Enter')go()})}
 async function api(method,path,body){
-  const r=await fetch('api/'+path,{method,headers:{'Content-Type':'application/json','X-Access-Code':lsGet(AK,'')||''},body:body===undefined?undefined:JSON.stringify(body)});
-  if(r.status===401){const c=prompt('أدخل كود الدخول للنظام');if(c){lsSet(AK,c);return api(method,path,body)}throw{code:'unauthorized'}}
+  const r=await fetch('api/'+path,{method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+(lsGet(AK,'')||'')},body:body===undefined?undefined:JSON.stringify(body)});
+  if(r.status===401){localStorage.removeItem(AK);showLogin();throw{code:'unauthorized'}}
+  if(r.status===409)throw{code:'conflict'};
   if(!r.ok)throw{code:r.status===413?'quota_exceeded':'invalid_argument'};
   return r.status===204?null:r.json()}
 function makeApiDb(){
@@ -823,10 +840,29 @@ function makeApiDb(){
       onSnapshot:(ok,err)=>sub(d=>({exists:!!d.settings,data:()=>d.settings}),ok,err),
       set:b=>api('PUT',c+'/'+encodeURIComponent(id),b),
       delete:()=>api('DELETE',c+'/'+encodeURIComponent(id))}}}}
+function applyRole(){$('logout').hidden=false;$('logout').onclick=()=>{localStorage.removeItem(AK);localStorage.removeItem('fv-me2');location.reload()};
+  if(ME.role==='rep'){['dash','clients','plan','users','teams','settings'].forEach(x=>document.querySelector('#tabs [data-tab="'+x+'"]').hidden=true);
+    const o=repOptions;repOptions=function(s,all){o(s,all);s.value=ME.repId;s.disabled=true}}}
+let USERS=[];async function loadUsers(){try{USERS=await api('GET','users');renderUsers()}catch{}}
+function renderUsers(){const m={};USERS.forEach(u=>m[u.repId]=u);const T=S.settings.teams||[];
+  $('uList').innerHTML=S.settings.reps.length?S.settings.reps.map(r=>{const u=m[r.id];return `<div class="item"><span class="n">${esc(r.name.trim()[0]||'؟')}</span><div><b>${esc(r.name)}</b><small dir="auto">${u?'يوزر: '+esc(u.username)+(u.active?'':' (موقوف)'):'بدون حساب'}</small></div><div class="acts"><select data-team="${esc(r.id)}"><option value="">بدون فريق</option>${T.map(x=>`<option value="${esc(x.id)}"${r.team===x.id?' selected':''}>${esc(x.name)}</option>`).join('')}</select><button class="btn sm" data-acc="${esc(r.id)}">${u?'تعديل الحساب':'إنشاء حساب'}</button>${u?`<button class="btn sm warn" data-tog="${esc(r.id)}">${u.active?'إيقاف':'تفعيل'}</button>`:''}</div></div>`}).join(''):'<div class="empty">أضف مندوب أولاً</div>'}
+$('uAdd').addEventListener('click',()=>{const n=$('uName').value.trim();if(!n)return;S.settings.reps.push({id:uid(),name:n,email:''});$('uName').value='';putSettings()});
+$('uList').addEventListener('change',e=>{const s=e.target.closest('[data-team]');if(!s)return;const r=S.settings.reps.find(x=>x.id===s.dataset.team);r.team=s.value;putSettings()});
+$('uList').addEventListener('click',async e=>{const a=e.target.closest('[data-acc]'),g=e.target.closest('[data-tog]');
+  try{if(a){const u=USERS.find(x=>x.repId===a.dataset.acc),un=prompt('اليوزر (٣ حروف على الأقل، إنجليزي)',u?u.username:'');if(!un)return;const pw=prompt(u?'كلمة سر جديدة (سيبها فاضية لو مش عايز تغيّرها)':'كلمة السر (٦ حروف على الأقل)','');if(!u&&!pw)return;
+      await api('PUT','users/'+a.dataset.acc,{username:un,password:pw||undefined,active:u?u.active:true});toast('تم الحفظ');loadUsers()}
+    if(g){const u=USERS.find(x=>x.repId===g.dataset.tog);await api('PUT','users/'+u.repId,{username:u.username,active:!u.active});loadUsers()}}
+  catch(x){toast(x&&x.code==='conflict'?'اليوزر مستخدم':'تأكد من اليوزر وكلمة السر',1)}});
+function renderTeams(){const T=S.settings.teams||[],t=iso(today());
+  $('tList').innerHTML=T.length?T.map(x=>{const ms=S.settings.reps.filter(r=>r.team===x.id),ids=new Set(ms.map(r=>r.id));let n=0,d=0;Object.values(S.plans).filter(p=>p.date===t&&ids.has(p.rep)).forEach(p=>p.stops.forEach(s=>{n++;if(s.status==='done')d++}));
+    return `<div class="item"><span class="n">${esc(x.name.trim()[0]||'؟')}</span><div><b>${esc(x.name)}</b><small>${ms.length} مندوب${ms.length?': '+esc(ms.map(r=>r.name).join('، ')):''}<br>زيارات اليوم: ${n} · تمت: ${d}</small></div><div class="acts"><button class="btn sm warn" data-td="${esc(x.id)}">حذف</button></div></div>`}).join(''):'<div class="empty">لا يوجد فرق بعد</div>'}
+$('tAdd').addEventListener('click',()=>{const n=$('tName').value.trim();if(!n)return;(S.settings.teams=S.settings.teams||[]).push({id:uid(),name:n});$('tName').value='';putSettings()});
+$('tList').addEventListener('click',e=>{const b=e.target.closest('[data-td]');if(!b)return;S.settings.teams=S.settings.teams.filter(x=>x.id!==b.dataset.td);S.settings.reps.forEach(r=>{if(r.team===b.dataset.td)r.team=''});putSettings()});
 async function bootApi(){
   let info=null;try{const r=await fetch('api/ping');if(r.ok)info=await r.json()}catch{}
   if(!info||!info.ok){loadLocal();return}   /* مفيش سيرفر (ملف عادي / GitHub Pages) → تخزين المتصفح */
-  if(info.auth&&!lsGet(AK,'')){const c=prompt('أدخل كود الدخول للنظام');if(c)lsSet(AK,c)}
+  if(!lsGet(AK,'')){showLogin();return}
+  applyRole();
   const d=makeApiDb();db=d;
   const me=lsGet('fv-me','');let first=0;const ready=()=>{if(++first===4){repOptions($('rRep'));if(me)$('rRep').value=me;show(location.hash.slice(1));bootAlert()}else renderData()};
   const once={c:0,p:0,s:0,v:0};const mark=k=>{if(!once[k]){once[k]=1;ready()}else renderData()};
@@ -851,6 +887,7 @@ if(inClaude){const C=window.claude;let booted=false;const bootLocal=()=>{if(!boo
   }).catch(()=>{clearTimeout(tm);bootLocal()});
 }else{enableSR();bootApi()}
 }
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>

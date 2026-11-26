@@ -32,3 +32,11 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Visits_Date_Rep')
   CREATE INDEX IX_Visits_Date_Rep ON dbo.Visits(VisitDate, Rep);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Visits_Client')
   CREATE INDEX IX_Visits_Client ON dbo.Visits(ClientId);
+
+IF OBJECT_ID(N'dbo.Users') IS NULL
+CREATE TABLE dbo.Users(
+  Id nvarchar(100) NOT NULL PRIMARY KEY,
+  Username nvarchar(100) NOT NULL, Hash nvarchar(200) NOT NULL,
+  Role nvarchar(10) NOT NULL, RepId nvarchar(100) NULL, Active bit NOT NULL DEFAULT 1);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='UX_Users_Username')
+  CREATE UNIQUE INDEX UX_Users_Username ON dbo.Users(Username);
