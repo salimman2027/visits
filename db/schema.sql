@@ -42,3 +42,10 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='UX_Users_Username')
   CREATE UNIQUE INDEX UX_Users_Username ON dbo.Users(Username);
 
 IF COL_LENGTH('dbo.Users','Changed') IS NULL ALTER TABLE dbo.Users ADD Changed bit NOT NULL DEFAULT 0;
+
+IF OBJECT_ID(N'dbo.Tracks') IS NULL
+CREATE TABLE dbo.Tracks(
+  Id bigint IDENTITY(1,1) PRIMARY KEY, Rep nvarchar(100) NOT NULL,
+  T datetime2(0) NOT NULL DEFAULT SYSUTCDATETIME(), Lat float NOT NULL, Lng float NOT NULL, Acc float NULL);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Tracks_T_Rep')
+  CREATE INDEX IX_Tracks_T_Rep ON dbo.Tracks(T, Rep);

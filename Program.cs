@@ -35,6 +35,8 @@ try
     var sql = await File.ReadAllTextAsync(Path.Combine(app.Environment.ContentRootPath, "db", "schema.sql"));
     await using var cmd = new SqlCommand(sql, c);
     await cmd.ExecuteNonQueryAsync();
+    // مسح نقاط التتبع الأقدم من ٩٠ يوم
+    await using (var purge = new SqlCommand("DELETE FROM dbo.Tracks WHERE T < DATEADD(day,-90,SYSUTCDATETIME())", c)) await purge.ExecuteNonQueryAsync();
     // admin / admin افتراضي. بيتغير لأول مرة من زر "كلمة السر" في الصفحة، وبعدها ما بيتلمسش
     await using var adm = new SqlCommand(@"IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Id='admin')
           INSERT dbo.Users(Id,Username,Hash,Role,Active,Changed) VALUES('admin','admin',@h,'admin',1,0)
@@ -105,7 +107,7 @@ static bool IsRep(HttpContext c) => (string?)c.Items["role"] == "rep";
 
 app.MapGet("/api/users", async (HttpContext ctx) =>
 {
-    if (IsRep(ctx)) return Results.Forbid();
+    if (IsRep(ctx)) return Results.StatusCode(403);
     await using var c = new SqlConnection(cs); await c.OpenAsync();
     await using var cmd = new SqlCommand("SELECT RepId,Username,Active FROM dbo.Users WHERE Role='rep'", c);
     await using var r = await cmd.ExecuteReaderAsync();
@@ -116,7 +118,7 @@ app.MapGet("/api/users", async (HttpContext ctx) =>
 
 app.MapPut("/api/users/{repId}", async (HttpContext ctx, string repId, JsonElement b) =>
 {
-    if (IsRep(ctx)) return Results.Forbid();
+    if (IsRep(ctx)) return Results.StatusCode(403);
     var u = (Str(b, "username", 100) ?? "").Trim().ToLowerInvariant(); var pw = Str(b, "password", 200);
     if (u.Length < 3 || (pw != null && pw.Length is > 0 and < 6)) return Results.BadRequest();
     var act = !(b.TryGetProperty("active", out var av) && av.ValueKind == JsonValueKind.False);
@@ -146,6 +148,39 @@ app.MapPost("/api/password", async (HttpContext ctx, JsonElement b) =>
     u.Parameters.AddWithValue("@h", HashPw(nw)); u.Parameters.AddWithValue("@i", (string?)ctx.Items["uid"] ?? "");
     await u.ExecuteNonQueryAsync();
     return Results.NoContent();
+});
+
+static double? Num(JsonElement e, string name) =>
+    e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : null;
+
+// المندوب بيبعت موقعه (التتبع للمناديب بس)
+app.MapPost("/api/track", async (HttpContext ctx, JsonElement b) =>
+{
+    if (!IsRep(ctx)) return Results.NoContent();
+    var rep = (string?)ctx.Items["rep"] ?? "";
+    var lat = Num(b, "lat"); var lng = Num(b, "lng");
+    if (rep == "" || lat is null || lng is null || Math.Abs(lat.Value) > 90 || Math.Abs(lng.Value) > 180) return Results.BadRequest();
+    await using var c = new SqlConnection(cs); await c.OpenAsync();
+    await using var cmd = new SqlCommand("INSERT dbo.Tracks(Rep,Lat,Lng,Acc) VALUES(@r,@a,@o,@c)", c);
+    cmd.Parameters.AddWithValue("@r", rep); cmd.Parameters.AddWithValue("@a", lat.Value); cmd.Parameters.AddWithValue("@o", lng.Value);
+    cmd.Parameters.AddWithValue("@c", (object?)Num(b, "acc") ?? DBNull.Value);
+    await cmd.ExecuteNonQueryAsync();
+    return Results.NoContent();
+});
+
+// المشرف بيقرأ خط السير (من/إلى بتوقيت UTC)
+app.MapGet("/api/track", async (HttpContext ctx, string from, string to) =>
+{
+    if (IsRep(ctx)) return Results.StatusCode(403);
+    const DateTimeStyles st = DateTimeStyles.RoundtripKind | DateTimeStyles.AdjustToUniversal;
+    if (!DateTime.TryParse(from, CultureInfo.InvariantCulture, st, out var f) || !DateTime.TryParse(to, CultureInfo.InvariantCulture, st, out var t)) return Results.BadRequest();
+    await using var c = new SqlConnection(cs); await c.OpenAsync();
+    await using var cmd = new SqlCommand("SELECT TOP 20000 Rep,T,Lat,Lng FROM dbo.Tracks WHERE T>=@f AND T<@t ORDER BY T", c);
+    cmd.Parameters.AddWithValue("@f", f); cmd.Parameters.AddWithValue("@t", t);
+    await using var r = await cmd.ExecuteReaderAsync();
+    var l = new List<object>();
+    while (await r.ReadAsync()) l.Add(new { rep = r.GetString(0), t = DateTime.SpecifyKind(r.GetDateTime(1), DateTimeKind.Utc).ToString("o"), lat = r.GetDouble(2), lng = r.GetDouble(3) });
+    return Results.Json(l);
 });
 
 // أعمدة مفهرسة لكل جدول: (اسم العمود، اسم الحقل في JSON، النوع، الطول)
@@ -209,7 +244,7 @@ app.MapGet("/api/stamp", async () =>
 app.MapPut("/api/{col}/{id}", async (HttpContext ctx, string col, string id, JsonElement body) =>
 {
     if (!map.TryGetValue(col, out var m) || id.Length is 0 or > 100) return Results.BadRequest();
-    if (IsRep(ctx) && (col == "settings" || (col is "plans" or "visits" && Str(body, "rep", 100) != (string?)ctx.Items["rep"]))) return Results.Forbid();
+    if (IsRep(ctx) && (col == "settings" || (col is "plans" or "visits" && Str(body, "rep", 100) != (string?)ctx.Items["rep"]))) return Results.StatusCode(403);
     var names = m.Cols.Select(x => x.Col).ToArray();
     var sql = $"UPDATE dbo.{m.Table} SET " + string.Concat(names.Select(n => $"{n}=@{n},")) +
               $"Data=@Data, Updated=SYSUTCDATETIME() WHERE Id=@Id; " +
