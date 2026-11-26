@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>الزيارات الميدانية</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script><script>window.LF=window.L</script>
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#00463c"><link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
@@ -877,10 +877,10 @@ function applyRole(){$('logout').hidden=false;startTracking();$('chpw').hidden=f
 
 /* ================= خريطة المناديب + التتبع ================= */
 let LM=null,LL=null,LT=null;const LCOL=['#d62828','#1d4ed8','#15803d','#c2410c','#7e22ce','#0e7490','#a16207','#be185d'];
-function initLive(){if(!window.L){toast('تعذّر تحميل الخريطة، اتأكد من الإنترنت',1);return}
+function initLive(){if(!window.LF){toast('تعذّر تحميل الخريطة، اتأكد من الإنترنت',1);return}
   if(!$('lvDate').value)$('lvDate').value=iso(today());
   const cv=$('lvRep').value;$('lvRep').innerHTML='<option value="*">كل المناديب</option>'+S.settings.reps.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');$('lvRep').value=cv||'*';
-  if(!LM){LM=L.map('lvMap').setView([24.7136,46.6753],10);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(LM);LL=L.layerGroup().addTo(LM)}
+  if(!LM){LM=LF.map('lvMap').setView([24.7136,46.6753],10);LF.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(LM);LL=LF.layerGroup().addTo(LM)}
   setTimeout(()=>LM.invalidateSize(),150);loadLive();
   clearInterval(LT);LT=setInterval(()=>{if(cur==='live'&&$('lvAuto').checked&&!document.hidden)loadLive()},30000)}
 const hhmm=t=>new Date(t).toLocaleTimeString('ar',{hour:'2-digit',minute:'2-digit'});
@@ -890,12 +890,12 @@ async function loadLive(){if(!LM)return;const d=$('lvDate').value||iso(today()),
   LL.clearLayers();const all=[],list=[];
   S.settings.reps.forEach((rp,i)=>{const pts=by[rp.id]||[],col=LCOL[i%LCOL.length];
     Object.values(S.plans).filter(p=>p.date===d&&p.rep===rp.id).forEach(p=>p.stops.forEach((s,k)=>{if(s.lat!=null){all.push([s.lat,s.lng]);
-      L.circleMarker([s.lat,s.lng],{radius:7,color:'#6b7280',weight:2,fillColor:s.status==='done'?'#16a34a':s.status==='notdone'?'#ef4444':'#d1d5db',fillOpacity:.9}).addTo(LL).bindPopup('<b>'+esc(s.name)+'</b><br>'+esc(rp.name)+' · '+(s.status==='done'?'تمت':s.status==='notdone'?'لم تتم':'لم تتم زيارتها بعد')+(s.startAt?'<br>بدأت '+hhmm(s.startAt)+(s.endAt?' · انتهت '+hhmm(s.endAt)+' · '+durTxt(durMin(s.startAt,s.endAt)):''):''))}}));
+      LF.circleMarker([s.lat,s.lng],{radius:7,color:'#6b7280',weight:2,fillColor:s.status==='done'?'#16a34a':s.status==='notdone'?'#ef4444':'#d1d5db',fillOpacity:.9}).addTo(LL).bindPopup('<b>'+esc(s.name)+'</b><br>'+esc(rp.name)+' · '+(s.status==='done'?'تمت':s.status==='notdone'?'لم تتم':'لم تتم زيارتها بعد')+(s.startAt?'<br>بدأت '+hhmm(s.startAt)+(s.endAt?' · انتهت '+hhmm(s.endAt)+' · '+durTxt(durMin(s.startAt,s.endAt)):''):''))}}));
     if(!pts.length){if(sel==='*'||sel===rp.id)list.push(`<div class="item"><span class="n" style="background:#9aa8a2">${esc(rp.name.trim()[0]||'؟')}</span><div><b>${esc(rp.name)}</b><small>لا توجد نقاط تتبع في هذا اليوم</small></div></div>`);return}
-    const ll=pts.map(p=>[p.lat,p.lng]);ll.forEach(x=>all.push(x));L.polyline(ll,{color:col,weight:4,opacity:.85}).addTo(LL);
-    L.circleMarker(ll[0],{radius:5,color:col,fillColor:'#fff',fillOpacity:1,weight:2}).addTo(LL).bindTooltip('بداية '+rp.name+' '+hhmm(pts[0].t));
+    const ll=pts.map(p=>[p.lat,p.lng]);ll.forEach(x=>all.push(x));LF.polyline(ll,{color:col,weight:4,opacity:.85}).addTo(LL);
+    LF.circleMarker(ll[0],{radius:5,color:col,fillColor:'#fff',fillOpacity:1,weight:2}).addTo(LL).bindTooltip('بداية '+rp.name+' '+hhmm(pts[0].t));
     const last=pts[pts.length-1],ago=Math.round((Date.now()-new Date(last.t))/60000),live=d===iso(today())&&ago<=10;
-    L.circleMarker(ll[ll.length-1],{radius:10,color:'#fff',weight:3,fillColor:col,fillOpacity:1}).addTo(LL).bindTooltip(rp.name+' · '+hhmm(last.t),{permanent:true,direction:'top',offset:[0,-8]});
+    LF.circleMarker(ll[ll.length-1],{radius:10,color:'#fff',weight:3,fillColor:col,fillOpacity:1}).addTo(LL).bindTooltip(rp.name+' · '+hhmm(last.t),{permanent:true,direction:'top',offset:[0,-8]});
     list.push(`<div class="item"><span class="n" style="background:${col}">${esc(rp.name.trim()[0]||'؟')}</span><div><b>${esc(rp.name)}</b><small>${live?'🟢 متصل الآن · ':''}آخر ظهور ${hhmm(last.t)}${d===iso(today())?' (من '+(ago<1?'أقل من دقيقة':ago+' دقيقة')+')':''} · ${pts.length} نقطة</small></div></div>`)});
   $('lvList').innerHTML=list.join('')||'<div class="empty">لا يوجد مناديب</div>';
   if(all.length&&!LM._fitDone){LM.fitBounds(all,{padding:[30,30],maxZoom:16});LM._fitDone=1}}
