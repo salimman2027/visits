@@ -4,6 +4,9 @@ on:
     paths: ['android/**', '.github/workflows/apk.yml']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -20,3 +23,11 @@ jobs:
         with:
           name: FieldVisits-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk FieldVisits.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: تطبيق الزيارات (APK) #${{ github.run_number }}
+          files: FieldVisits.apk
+          make_latest: true

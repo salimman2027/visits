@@ -24,7 +24,13 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setGeolocationEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
-        web.setWebViewClient(new WebViewClient());
+        web.setWebViewClient(new WebViewClient() {
+            @Override public void onReceivedError(WebView v, WebResourceRequest r, WebResourceError e) {
+                if (r.isForMainFrame()) {
+                    v.loadDataWithBaseURL(null, "<html dir='rtl'><body style='font-family:sans-serif;text-align:center;padding:40px'><h2>تعذّر الاتصال</h2><p>تأكد من الإنترنت وحاول مرة أخرى.</p><p><a href='" + URL + "' style='font-size:20px'>إعادة المحاولة</a></p></body></html>", "text/html", "utf-8", null);
+                }
+            }
+        });
         web.setWebChromeClient(new WebChromeClient() {
             @Override public void onGeolocationPermissionsShowPrompt(String o, GeolocationPermissions.Callback cb) {
                 cb.invoke(o, checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED, false);
