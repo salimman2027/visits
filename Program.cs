@@ -161,9 +161,10 @@ app.MapPost("/api/track", async (HttpContext ctx, JsonElement b) =>
     var lat = Num(b, "lat"); var lng = Num(b, "lng");
     if (rep == "" || lat is null || lng is null || Math.Abs(lat.Value) > 90 || Math.Abs(lng.Value) > 180) return Results.BadRequest();
     await using var c = new SqlConnection(cs); await c.OpenAsync();
-    await using var cmd = new SqlCommand("INSERT dbo.Tracks(Rep,Lat,Lng,Acc) VALUES(@r,@a,@o,@c)", c);
+    await using var cmd = new SqlCommand("INSERT dbo.Tracks(Rep,Lat,Lng,Acc,Speed) VALUES(@r,@a,@o,@c,@s)", c);
     cmd.Parameters.AddWithValue("@r", rep); cmd.Parameters.AddWithValue("@a", lat.Value); cmd.Parameters.AddWithValue("@o", lng.Value);
     cmd.Parameters.AddWithValue("@c", (object?)Num(b, "acc") ?? DBNull.Value);
+    cmd.Parameters.AddWithValue("@s", (object?)Num(b, "speed") ?? DBNull.Value);
     await cmd.ExecuteNonQueryAsync();
     return Results.NoContent();
 });
@@ -175,11 +176,11 @@ app.MapGet("/api/track", async (HttpContext ctx, string from, string to) =>
     const DateTimeStyles st = DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
     if (!DateTime.TryParse(from, CultureInfo.InvariantCulture, st, out var f) || !DateTime.TryParse(to, CultureInfo.InvariantCulture, st, out var t)) return Results.BadRequest();
     await using var c = new SqlConnection(cs); await c.OpenAsync();
-    await using var cmd = new SqlCommand("SELECT TOP 20000 Rep,T,Lat,Lng FROM dbo.Tracks WHERE T>=@f AND T<@t ORDER BY T", c);
+    await using var cmd = new SqlCommand("SELECT TOP 20000 Rep,T,Lat,Lng,Speed FROM dbo.Tracks WHERE T>=@f AND T<@t ORDER BY T", c);
     cmd.Parameters.AddWithValue("@f", f); cmd.Parameters.AddWithValue("@t", t);
     await using var r = await cmd.ExecuteReaderAsync();
     var l = new List<object>();
-    while (await r.ReadAsync()) l.Add(new { rep = r.GetString(0), t = DateTime.SpecifyKind(r.GetDateTime(1), DateTimeKind.Utc).ToString("o"), lat = r.GetDouble(2), lng = r.GetDouble(3) });
+    while (await r.ReadAsync()) l.Add(new { rep = r.GetString(0), t = DateTime.SpecifyKind(r.GetDateTime(1), DateTimeKind.Utc).ToString("o"), lat = r.GetDouble(2), lng = r.GetDouble(3), speed = r.IsDBNull(4) ? (double?)null : r.GetDouble(4) });
     return Results.Json(l);
 });
 
