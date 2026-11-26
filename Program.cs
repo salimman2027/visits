@@ -17,7 +17,7 @@ app.Use(async (ctx, next) =>
         if (!ctx.Response.HasStarted)
         {
             ctx.Response.StatusCode = 500;
-            await ctx.Response.WriteAsync("Server error: " + ex.GetType().Name);
+            await ctx.Response.WriteAsync("Server error: " + ex.GetType().Name + ": " + (ex.Message.Length > 200 ? ex.Message[..200] : ex.Message));
         }
     }
 });
@@ -26,6 +26,7 @@ var cs = builder.Configuration.GetConnectionString("Default")
          ?? throw new InvalidOperationException("ConnectionStrings:Default is missing");
 var accessCode = (builder.Configuration["AccessCode"] ?? "").Trim();
 
+string? initError = null;
 // إنشاء الجداول أول تشغيل (لو فشل الموقع يفضل شغال والـ log يوضح السبب)
 try
 {
@@ -41,7 +42,7 @@ try
     adm.Parameters.AddWithValue("@h", HashPw("admin"));
     await adm.ExecuteNonQueryAsync();
 }
-catch (Exception ex) { app.Logger.LogError(ex, "Database init failed"); }
+catch (Exception ex) { initError = ex.GetType().Name + ": " + ex.Message; app.Logger.LogError(ex, "Database init failed"); }
 
 // ===== حسابات وصلاحيات (admin / rep) =====
 var key = SHA256.HashData(Encoding.UTF8.GetBytes(cs + accessCode + "fv-token"));
@@ -50,7 +51,7 @@ string Un64(string s) { s = s.Replace('-', '+').Replace('_', '/'); return Encodi
 string Sign(string s) => Convert.ToBase64String(HMACSHA256.HashData(key, Encoding.UTF8.GetBytes(s))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 var fails = new System.Collections.Concurrent.ConcurrentDictionary<string, (int n, DateTime t)>();
 
-app.MapGet("/api/ping", () => Results.Json(new { ok = true, auth = true }));
+app.MapGet("/api/ping", () => Results.Json(new { ok = true, auth = true, db = initError }));
 
 app.MapPost("/api/login", async (JsonElement b) =>
 {

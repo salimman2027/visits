@@ -821,7 +821,7 @@ function showLogin(){if($('login'))return;const pe=lsGet('fv-err','');localStora
   const go=async()=>{const b=$('lGo');b.disabled=true;$('lMsg').textContent='جاري الدخول…';
     try{if($('lP').value==='admin'||$('lP').value==='Demo@1234')lsSet('fv-warn',1);
       const r=await fetch('api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({u:$('lU').value,p:$('lP').value})});
-      if(!r.ok){$('lMsg').textContent=r.status===401?'بيانات الدخول غلط':r.status===429?'محاولات كتير، جرّب بعد شوية':'خطأ من السيرفر ('+r.status+')';b.disabled=false;return}
+      if(!r.ok){$('lMsg').textContent=r.status===401?'بيانات الدخول غلط':r.status===429?'محاولات كتير، جرّب بعد شوية':'خطأ من السيرفر ('+r.status+') '+(await r.text()).slice(0,200);b.disabled=false;return}
       const j=await r.json();lsSet(AK,j.token);lsSet('fv-me2',{role:j.role,repId:j.repId});if(j.repId)lsSet('fv-me',j.repId);$('lMsg').textContent='تم، جاري التحميل…';location.reload()}
     catch(e){$('lMsg').textContent='تعذّر الاتصال بالسيرفر: '+(e&&e.message||'');b.disabled=false}};
   $('lEye').onclick=()=>{const s=$('lP').type==='password';$('lP').type=s?'text':'password';$('lEye').textContent=s?'🙈':'👁'};if(pe)$('lMsg').textContent='السيرفر رفض الجلسة بعد الدخول ('+pe+')';$('lGo').onclick=go;$('lP').addEventListener('keydown',e=>{if(e.key==='Enter')go()})}
