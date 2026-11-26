@@ -172,7 +172,7 @@ app.MapPost("/api/track", async (HttpContext ctx, JsonElement b) =>
 app.MapGet("/api/track", async (HttpContext ctx, string from, string to) =>
 {
     if (IsRep(ctx)) return Results.StatusCode(403);
-    const DateTimeStyles st = DateTimeStyles.RoundtripKind | DateTimeStyles.AdjustToUniversal;
+    const DateTimeStyles st = DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
     if (!DateTime.TryParse(from, CultureInfo.InvariantCulture, st, out var f) || !DateTime.TryParse(to, CultureInfo.InvariantCulture, st, out var t)) return Results.BadRequest();
     await using var c = new SqlConnection(cs); await c.OpenAsync();
     await using var cmd = new SqlCommand("SELECT TOP 20000 Rep,T,Lat,Lng FROM dbo.Tracks WHERE T>=@f AND T<@t ORDER BY T", c);
