@@ -24,7 +24,7 @@ app.Use(async (ctx, next) =>
 
 var cs = builder.Configuration.GetConnectionString("Default")
          ?? throw new InvalidOperationException("ConnectionStrings:Default is missing");
-var accessCode = builder.Configuration["AccessCode"] ?? "";
+var accessCode = (builder.Configuration["AccessCode"] ?? "").Trim();
 
 // إنشاء الجداول أول تشغيل (لو فشل الموقع يفضل شغال والـ log يوضح السبب)
 try
@@ -35,7 +35,9 @@ try
     await using var cmd = new SqlCommand(sql, c);
     await cmd.ExecuteNonQueryAsync();
     // أول تشغيل: مستخدم admin بكلمة سر = AccessCode القديم
-    await using var adm = new SqlCommand("IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Id='admin') INSERT dbo.Users(Id,Username,Hash,Role,Active) VALUES('admin','admin',@h,'admin',1)", c);
+    await using var adm = new SqlCommand("IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Id='admin') INSERT dbo.Users(Id,Username,Hash,Role,Active) VALUES('admin','admin',@h,'admin',1) ELSE IF @force=1 UPDATE dbo.Users SET Hash=@h, Active=1 WHERE Id='admin'", c);
+    // لو AccessCode محدد في الإعدادات، يبقى هو كلمة سر admin دايماً (للاسترجاع: غيّره واعمل restart)
+    adm.Parameters.AddWithValue("@force", accessCode.Length > 0 ? 1 : 0);
     adm.Parameters.AddWithValue("@h", HashPw(accessCode.Length > 0 ? accessCode : Guid.NewGuid().ToString("N")));
     await adm.ExecuteNonQueryAsync();
 }
