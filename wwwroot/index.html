@@ -484,7 +484,7 @@ function applyFinal(text){text=text.trim();if(!text||!target)return;const el=$(t
 /* ================= tabs ================= */
 const TABS=['dash','clients','plan','rep','adhoc','report','users','teams','settings'];
 let ME=lsGet('fv-me2',{role:'admin'});
-function show(t){if(ME.role==='rep'&&!['rep','adhoc','report'].includes(t))t='rep';if(!TABS.includes(t))t=S.settings.reps.length&&S.clients.length?'dash':'clients';
+function show(t){if(ME.role==='rep'&&['users','teams','settings'].includes(t))t='rep';if(!TABS.includes(t))t=S.settings.reps.length&&S.clients.length?'dash':'clients';
   TABS.forEach(x=>$('t-'+x).classList.toggle('on',x===t));document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===t?'page':'false'));
   if(location.hash!=='#'+t)try{history.replaceState(null,'','#'+t)}catch{};cur=t;if(t==='users')loadUsers();renderData();window.scrollTo(0,0)}
 let cur='';
@@ -847,7 +847,7 @@ function makeApiDb(){
       delete:()=>api('DELETE',c+'/'+encodeURIComponent(id))}}}}
 function applyRole(){$('logout').hidden=false;$('chpw').hidden=false;if(lsGet('fv-warn',0)){localStorage.removeItem('fv-warn');setTimeout(()=>toast('كلمة السر افتراضية، غيّرها من زر كلمة السر',1),800)}
   $('chpw').onclick=async()=>{const o=prompt('كلمة السر الحالية');if(!o)return;const n=prompt('كلمة السر الجديدة (٦ حروف على الأقل)');if(!n)return;try{await api('POST','password',{old:o,new:n});toast('تم تغيير كلمة السر')}catch{toast('كلمة السر الحالية غلط أو الجديدة قصيرة',1)}};$('logout').onclick=()=>{localStorage.removeItem(AK);localStorage.removeItem('fv-me2');location.reload()};
-  if(ME.role==='rep'){['dash','clients','plan','users','teams','settings'].forEach(x=>document.querySelector('#tabs [data-tab="'+x+'"]').hidden=true);
+  if(ME.role==='rep'){['users','teams','settings'].forEach(x=>document.querySelector('#tabs [data-tab="'+x+'"]').hidden=true);
     const o=repOptions;repOptions=function(s,all){o(s,all);s.value=ME.repId;s.disabled=true}}}
 let USERS=[];async function loadUsers(){try{USERS=await api('GET','users');renderUsers()}catch{}}
 function renderUsers(){const m={};USERS.forEach(u=>m[u.repId]=u);const T=S.settings.teams||[];
