@@ -245,6 +245,7 @@ details summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
     <div class="chips" id="cMeta"></div>
     <div class="hint" id="cAddr"></div>
     <div class="wrapr" style="margin:12px 0 16px"><a class="btn pri go" id="cGo" target="_blank" rel="noopener">اذهب للموقع عن طريق جوجل</a><a class="btn" id="cTel"></a></div>
+    <div class="wrapr" style="margin:-4px 0 14px"><button type="button" class="btn" id="cStart">▶ بدء الزيارة</button><span class="hint" id="cTimer"></span></div>
     <div class="f"><span class="lbl">حالة الزيارة</span><div class="seg" id="cStatus"><button type="button" data-v="done" aria-pressed="false">تمت</button><button type="button" class="no" data-v="notdone" aria-pressed="false">لم تتم</button></div></div>
     <div class="f" id="cReasonBox" hidden><span class="lbl">السبب</span><div class="seg small" id="cReason"></div></div>
     <div class="f" id="cOutBox" hidden><span class="lbl">نتيجة الزيارة</span><div class="seg small" id="cOut"></div></div>
@@ -297,6 +298,7 @@ details summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
       <div class="f"><label for="aNextNote">الخطوة التالية</label><div class="row"><input id="aNextNote" placeholder="مثلًا: تحديد اجتماع مع التنفيذي، ديمو أونلاين"><button type="button" class="mic" data-mic="aNextNote" data-kind="replace" aria-label="قل المطلوب في المتابعة"></button></div><div class="hint">الموعد يظهر كتنبيه في لوحة المتابعة.</div></div>
     </div>
     <div class="msg" id="aMsg" role="status"></div>
+    <div class="wrapr" style="margin-bottom:10px"><button type="button" class="btn" id="aStart">▶ بدء الزيارة</button><span class="hint" id="aTimer"></span></div>
     <button class="btn pri full" type="submit" id="aSave">حفظ الزيارة</button>
     <div class="row" style="margin-top:8px"><button type="button" class="btn" id="aClear" style="flex:1">زيارة جديدة / تفريغ</button></div>
   </form>
@@ -586,6 +588,20 @@ $('pPlans').addEventListener('click',e=>{const b=e.target.closest('[data-po]');i
 const REASONS=['العميل غير موجود','المكان مقفول','رفض المقابلة','طلب تأجيل','العنوان غلط','أخرى'];
 const segBtns=a=>a.map(r=>`<button type="button" data-v="${r}" aria-pressed="false">${r}</button>`).join('');
 $('cReason').innerHTML=segBtns(REASONS);$('cOut').innerHTML=segBtns(OUTS);$('cPrio').innerHTML=segBtns(PRIOS);$('aPrio').innerHTML=segBtns(PRIOS);$('aReason').innerHTML=segBtns(REASONS);$('aOut').innerHTML=segBtns(OUTS);
+
+/* ================= مدة الزيارة (بدء / انتهاء) ================= */
+const durMin=(a,b)=>a&&b&&b>a?Math.max(1,Math.round((b-a)/60000)):null;
+const durTxt=m=>m==null?'':m>=60?Math.floor(m/60)+' س'+(m%60?' و'+m%60+' د':''):m+' د';
+const t24=t=>new Date(t).toTimeString().slice(0,5);
+function timerTxt(s){if(!s||!s.startAt)return'';const hm=t=>new Date(t).toLocaleTimeString('ar',{hour:'2-digit',minute:'2-digit'});
+  return s.endAt?'بدأت '+hm(s.startAt)+' · انتهت '+hm(s.endAt)+' · المدة '+durTxt(durMin(s.startAt,s.endAt)):'بدأت '+hm(s.startAt)+' · مرّ '+(durTxt(durMin(s.startAt,Date.now()))||'أقل من دقيقة')}
+function updateCTimer(){const p=repPlan(),s=p&&curIdx>=0?p.stops[curIdx]:null;if(!s){$('cTimer').textContent='';return}
+  $('cStart').hidden=!!s.startAt||!!s.status;$('cTimer').textContent=timerTxt(s)}
+$('cStart').addEventListener('click',()=>{const p=repPlan();if(!p||curIdx<0)return;const s=p.stops[curIdx];if(!s.startAt){s.startAt=Date.now();putPlan(p);toast('بدأت الزيارة '+s.name)}updateCTimer()});
+let aStartAt=null;
+function updateATimer(){$('aStart').hidden=!!aStartAt;$('aTimer').textContent=aStartAt?timerTxt({startAt:aStartAt}):''}
+$('aStart').addEventListener('click',()=>{if(!aStartAt){aStartAt=Date.now();updateATimer()}});
+setInterval(()=>{if(cur==='rep')updateCTimer();if(cur==='adhoc')updateATimer()},30000);
 let curIdx=-1,curKey='',f={};
 function repPlan(){return S.plans[planId($('rRep').value,$('rDate').value)]}
 function nextPending(p,from){const n=p.stops.length;for(let k=0;k<n;k++){const i=(from+k)%n;if(!p.stops[i].status)return i}return -1}
@@ -594,7 +610,7 @@ function renderRep(){repOptions($('rRep'));const p=repPlan();const key=$('rRep')
   $('rEmpty').hidden=true;const done=p.stops.filter(s=>s.status==='done').length,nd=p.stops.filter(s=>s.status==='notdone').length,all=p.stops.length;
   $('rProg').innerHTML=`<div class="bar"><i style="width:${Math.round((done+nd)/all*100)}%"></i></div><div class="hint">${done+nd} من ${all} · تمت ${done} · لم تتم ${nd}${routeLinks(p.stops.filter(s=>!s.status),null).length?' · <a href="'+esc(routeLinks(p.stops.filter(s=>!s.status),null)[0])+'" target="_blank" rel="noopener">مسار الباقي في الخرائط</a>':''}</div>`;
   if(key!==curKey||curIdx>=all||(curIdx<0&&nextPending(p,0)>=0)){curKey=key;loadStop(p,nextPending(p,0))}
-  $('rList').innerHTML=p.stops.map((s,i)=>`<div class="item"><span class="n ${s.status==='done'?'done':s.status==='notdone'?'no':''}">${i+1}</span><div><b>${esc(s.name)}</b><small>${s.status==='done'?'تمت':s.status==='notdone'?'لم تتم'+(s.reason?' — '+esc(s.reason):''):i===curIdx?'الزيارة الحالية':'منتظرة'}${s.next?' · القادمة '+esc(fmt(s.next)):''}</small></div><div class="acts"><a class="btn sm" href="${esc(goUrl(s))}" target="_blank" rel="noopener">اذهب للموقع</a><button class="btn sm" data-open="${i}">${s.status?'تعديل':'فتح'}</button></div></div>`).join('')}
+  $('rList').innerHTML=p.stops.map((s,i)=>`<div class="item"><span class="n ${s.status==='done'?'done':s.status==='notdone'?'no':''}">${i+1}</span><div><b>${esc(s.name)}</b><small>${s.status==='done'?'تمت':s.status==='notdone'?'لم تتم'+(s.reason?' — '+esc(s.reason):''):i===curIdx?'الزيارة الحالية':'منتظرة'}${s.startAt&&s.endAt?' · المدة '+durTxt(durMin(s.startAt,s.endAt)):''}${s.next?' · القادمة '+esc(fmt(s.next)):''}</small></div><div class="acts"><a class="btn sm" href="${esc(goUrl(s))}" target="_blank" rel="noopener">اذهب للموقع</a><button class="btn sm" data-open="${i}">${s.status?'تعديل':'فتح'}</button></div></div>`).join('');updateCTimer()}
 function loadStop(p,i){curIdx=i;f={loaded:true,editing:false,status:'',reason:'',photo:null,conf:null};
   if(i<0){$('rCur').hidden=true;$('rDone').hidden=false;return}
   $('rDone').hidden=true;$('rCur').hidden=false;const s=p.stops[i];f.editing=!!s.status;
@@ -620,7 +636,7 @@ $('cImgRm').addEventListener('click',()=>{f.photo=null;syncForm()});
 $('cLocBtn').addEventListener('click',async()=>{$('cLocTxt').textContent='أحدد موقعك…';try{const h=await here();f.conf={lat:h[0],lng:h[1],acc:h[2],at:Date.now(),how:'gps'};syncForm()}catch{$('cLocTxt').textContent=geoFail}});
 $('cLocMan').addEventListener('input',()=>{const v=$('cLocMan').value.trim();if(!v)return;const c=coords(v);f.conf={lat:c?c[0]:null,lng:c?c[1]:null,text:v,at:Date.now(),how:'manual'};syncForm()});
 $('cSave').addEventListener('click',()=>{const p=repPlan();if(!p||curIdx<0)return;if(!f.status){msg('cMsg','اختر حالة الزيارة: تمت أو لم تتم',1);$('cStatus').scrollIntoView({block:'center',behavior:'smooth'});return}
-  const s=p.stops[curIdx];Object.assign(s,{status:f.status,reason:f.status==='notdone'?f.reason:'',outcome:f.status==='done'?f.out:'',prio:f.status==='done'&&f.out===OUTS[0]?(f.prio||''):'',meetOk:!!($('cNext').value&&$('cMeet').checked),notes:$('cNotes').value.trim(),next:$('cNext').value,nextTime:$('cNext').value?$('cNextTime').value:'',nextNote:$('cNext').value?$('cNextNote').value.trim():'',photo:f.photo,conf:f.conf,savedAt:Date.now()});
+  const s=p.stops[curIdx];Object.assign(s,{status:f.status,reason:f.status==='notdone'?f.reason:'',outcome:f.status==='done'?f.out:'',prio:f.status==='done'&&f.out===OUTS[0]?(f.prio||''):'',meetOk:!!($('cNext').value&&$('cMeet').checked),notes:$('cNotes').value.trim(),next:$('cNext').value,nextTime:$('cNext').value?$('cNextTime').value:'',nextNote:$('cNext').value?$('cNextNote').value.trim():'',photo:f.photo,conf:f.conf,endAt:(f.editing&&s.endAt)?s.endAt:Date.now(),savedAt:Date.now()});
   const c=clientById(s.cid);if(c){setFollow(c,p.rep,p.date,s);if(c.lat==null&&f.conf&&f.conf.lat!=null){c.lat=f.conf.lat;c.lng=f.conf.lng;s.lat=c.lat;s.lng=c.lng}putClient(c)}
   const name=s.name;f.editing=false;putPlan(p);const nx=nextPending(p,curIdx+1);loadStop(p,nx);renderRep();toast('تم حفظ زيارة '+name+(nx>=0?' — التالية: '+p.stops[nx].name:' — خلصت زيارات اليوم'));window.scrollTo({top:$('rCur').offsetTop-60,behavior:'smooth'})});
 $('rList').addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(!b)return;loadStop(repPlan(),+b.dataset.open);renderRep();window.scrollTo({top:$('rCur').offsetTop-60,behavior:'smooth'})});
@@ -691,7 +707,7 @@ function payload(X){const k=counts(X.seen);return{type:'field_visits_report',per
   openOpportunities:oppsOf(X.seen).map((s,i)=>({rank:i+1,client:s.name,priority:s.prio||'',meetingConfirmed:!!s.meetOk,nextStep:s.nextNote||'',nextDate:s.next||'',nextTime:s.nextTime||''})),
   visits:X.all.map(s=>{const rep=S.settings.reps.find(r=>r.id===s.rep)||{};return{rep:rep.name||'',repEmail:rep.email||'',date:s.date,scheduled:s.kind==='plan',order:s.order||null,client:s.name,phone:s.phone||'',sector:s.sector||'',size:s.size||'',address:s.loc||'',lat:s.lat??null,lng:s.lng??null,status:s.status||'not_visited',statusAr:stTxt(s),outcome:s.outcome||'',priority:s.prio||'',meetingConfirmed:!!s.meetOk,reason:s.reason||'',notes:s.notes||'',
     nextFollowUp:s.next||'',nextFollowUpTime:s.nextTime||'',nextFollowUpNote:s.nextNote||'',confirmedLocation:s.conf?{lat:s.conf.lat,lng:s.conf.lng,accuracy_m:s.conf.acc||null,method:s.conf.how,text:s.conf.text||''}:null,
-    distanceFromClient_m:s.conf&&s.conf.lat!=null&&s.lat!=null?Math.round(km([s.lat,s.lng],[s.conf.lat,s.conf.lng])*1000):null,cardPhoto:s.photo&&(s.photo.url||s.photo.id)?(s.photo.url||'/_blob/'+s.photo.id):(s.photo?'attached_in_app':''),savedAt:s.savedAt?new Date(s.savedAt).toISOString():''}})}}
+    distanceFromClient_m:s.conf&&s.conf.lat!=null&&s.lat!=null?Math.round(km([s.lat,s.lng],[s.conf.lat,s.conf.lng])*1000):null,cardPhoto:s.photo&&(s.photo.url||s.photo.id)?(s.photo.url||'/_blob/'+s.photo.id):(s.photo?'attached_in_app':''),savedAt:s.savedAt?new Date(s.savedAt).toISOString():'',startAt:s.startAt?new Date(s.startAt).toISOString():'',endAt:s.endAt?new Date(s.endAt).toISOString():'',durationMin:durMin(s.startAt,s.endAt)}})}}
 $('xAll').addEventListener('change',()=>{xAll=$('xAll').checked;lsSet('fv-xall',xAll);renderReport()});
 ['xRep','xDate'].forEach(i=>$(i).addEventListener('change',renderReport));$('xArea').addEventListener('input',renderReport);
 $('xPer').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;xPer=b.dataset.v;lsSet('fv-per',xPer);renderReport()});
@@ -706,8 +722,8 @@ $('sCRM').addEventListener('click',async()=>{const X=xCtx();if(!X.all.length){ms
   catch{try{await fetch(u,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body});ok=true}catch{msg('sMsg',inClaude?'الإرسال المباشر للـCRM ممنوع داخل صفحة Claude — افتح ملف HTML في Chrome وأرسل من هناك، أو استخدم «نسخ التقرير».':'تعذّر الوصول لرابط الـCRM — تأكد من النت والرابط.',1);return}}
   if(ok){const t=Date.now();sources(X).forEach(o=>{o.sentCRM=t;o.stops?putPlan(o):putVisit(o)});msg('sMsg',conf?'تم الإرسال للـCRM واستلمه بنجاح.':'تم إرسال الطلب للـCRM (الخادم ما بيرجع تأكيد للمتصفح — راجع وصوله في الـCRM أول مرة).')}});
 $('sCSV').addEventListener('click',()=>{const X=xCtx();if(!X.all.length){msg('sMsg','مافيش زيارات',1);return}
-  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const h=['المندوب','التاريخ','نوع الزيارة','العميل','التليفون','القطاع','الحجم','الحالة','النتيجة','الأولوية','اجتماع مؤكد','السبب','الشرح','موعد المتابعة','الساعة','المطلوب في المتابعة','تأكيد الموقع'];
-  const csv='﻿'+[h.map(q).join(','),...X.all.map(s=>[repName(s.rep),s.date,s.kind==='plan'?'مجدولة':'غير مجدولة',s.name,s.phone,s.sector,s.size,stTxt(s),s.outcome,s.prio,s.meetOk?'نعم':'',s.reason,s.notes,s.next,s.nextTime,s.nextNote,s.conf&&s.conf.lat!=null?s.conf.lat+','+s.conf.lng:(s.conf?'يدوي':'')].map(q).join(','))].join('\r\n');
+  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const h=['المندوب','التاريخ','نوع الزيارة','العميل','التليفون','القطاع','الحجم','الحالة','النتيجة','الأولوية','اجتماع مؤكد','السبب','الشرح','موعد المتابعة','الساعة','المطلوب في المتابعة','تأكيد الموقع','بدء الزيارة','انتهاء الزيارة','المدة (دقيقة)'];
+  const csv='﻿'+[h.map(q).join(','),...X.all.map(s=>[repName(s.rep),s.date,s.kind==='plan'?'مجدولة':'غير مجدولة',s.name,s.phone,s.sector,s.size,stTxt(s),s.outcome,s.prio,s.meetOk?'نعم':'',s.reason,s.notes,s.next,s.nextTime,s.nextNote,s.conf&&s.conf.lat!=null?s.conf.lat+','+s.conf.lng:(s.conf?'يدوي':''),s.startAt?t24(s.startAt):'',s.endAt?t24(s.endAt):'',durMin(s.startAt,s.endAt)??''].map(q).join(','))].join('\r\n');
   if(inClaude){copy(csv.slice(1).replace(/","/g,'"\t"'),$('sCSV'),'تنزيل Excel (CSV)');msg('sMsg','التنزيل غير متاح داخل الصفحة هنا — نسخت الجدول، الصقه في Excel.');return}
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='زيارات-'+X.a+(X.a!==X.b?'_'+X.b:'')+'.csv';document.body.appendChild(a);a.click();a.remove()});
 
@@ -717,7 +733,7 @@ const cliByName=n=>{n=norm(n);return n?S.clients.find(c=>norm(c.name)===n):null}
 function syncA(){$('aStatus').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===aF.status));$('aReasonBox').hidden=aF.status!=='notdone';$('aOutBox').hidden=aF.status!=='done';
   $('aReason').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===aF.reason));$('aOut').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===aF.out));$('aPrioBox').hidden=!(aF.status==='done'&&aF.out===OUTS[0]);$('aPrio').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===aF.prio));
   $('aLocInfo').textContent=aF.conf?(aF.conf.lat!=null?'تم تأكيد الموقع: '+aF.conf.lat.toFixed(5)+', '+aF.conf.lng.toFixed(5):'تم تأكيد الموقع'):''}
-function aReset(){const rep=$('aRep').value;aEdit=null;$('aForm').reset();$('aRep').value=rep;aF={status:'done',reason:'',out:'',prio:'',conf:null};$('aDate').value=iso(today());$('aTitle').textContent='تسجيل زيارة غير مجدولة';$('aSave').textContent='حفظ الزيارة';$('aMatch').textContent='';syncA()}
+function aReset(){const rep=$('aRep').value;aStartAt=null;setTimeout(updateATimer,0);aEdit=null;$('aForm').reset();$('aRep').value=rep;aF={status:'done',reason:'',out:'',prio:'',conf:null};$('aDate').value=iso(today());$('aTitle').textContent='تسجيل زيارة غير مجدولة';$('aSave').textContent='حفظ الزيارة';$('aMatch').textContent='';syncA()}
 $('aStatus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;aF.status=b.dataset.v;if(aF.status==='done')aF.reason='';else aF.out='';syncA()});
 $('aReason').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;aF.reason=aF.reason===b.dataset.v?'':b.dataset.v;syncA()});
 $('aOut').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;aF.out=aF.out===b.dataset.v?'':b.dataset.v;syncA()});
@@ -736,7 +752,7 @@ $('aForm').addEventListener('submit',e=>{e.preventDefault();const name=$('aName'
   else{c={...c};if(!c.phone&&phone)c.phone=phone;if(!c.sector&&sector)c.sector=sector;if(!c.loc&&loc)c.loc=loc;if(c.lat==null&&lc){c.lat=lc[0];c.lng=lc[1]}}
   if(c.lat==null&&aF.conf&&aF.conf.lat!=null){c.lat=aF.conf.lat;c.lng=aF.conf.lng}
   const v={...old,id:aEdit||uid(),rep,date,cid:c.id,name:c.name,phone:phone||c.phone||'',sector:sector||c.sector||'',size:c.size||'',loc:loc||c.loc||'',lat:c.lat,lng:c.lng,status:aF.status,reason:aF.status==='notdone'?aF.reason:'',outcome:aF.status==='done'?aF.out:'',prio:aF.status==='done'&&aF.out===OUTS[0]?(aF.prio||''):'',meetOk:!!(next&&$('aMeet').checked),
-    notes:$('aNotes').value.trim(),next,nextTime:next?$('aNextTime').value:'',nextNote:next?$('aNextNote').value.trim():'',conf:aF.conf,savedAt:Date.now(),created:old.created||Date.now()};
+    notes:$('aNotes').value.trim(),next,nextTime:next?$('aNextTime').value:'',nextNote:next?$('aNextNote').value.trim():'',conf:aF.conf,startAt:aStartAt||old.startAt||null,endAt:(aEdit&&old.endAt)?old.endAt:Date.now(),savedAt:Date.now(),created:old.created||Date.now()};
   setFollow(c,rep,date,v);putClient(c);putVisit(v);
   toast('تم حفظ زيارة '+name+(isNew?' وإضافته للعملاء':'')+(next?' — المتابعة '+fmt(next):''));aReset();msg('aMsg','');window.scrollTo({top:0,behavior:'smooth'})});
 function renderAdhoc(){repOptions($('aRep'));if(!$('aRep').value&&lsGet('fv-me',''))$('aRep').value=lsGet('fv-me','');
@@ -747,7 +763,7 @@ function renderAdhoc(){repOptions($('aRep'));if(!$('aRep').value&&lsGet('fv-me',
 $('aRep').addEventListener('change',()=>{lsSet('fv-me',$('aRep').value);renderAdhoc()});
 $('aList').addEventListener('click',e=>{const ed=e.target.closest('[data-ae]'),dl=e.target.closest('[data-ad]');
   if(ed){const v=S.visits.find(x=>x.id===ed.dataset.ae);if(!v)return;aReset();aEdit=v.id;$('aRep').value=v.rep;$('aDate').value=v.date;$('aName').value=v.name;$('aPhone').value=v.phone||'';$('aSector').value=v.sector||'';$('aLoc').value=v.loc||'';$('aNotes').value=v.notes||'';$('aNext').value=v.next||'';$('aNextTime').value=v.nextTime||'';$('aNextNote').value=v.nextNote||'';
-    aF={status:v.status||'done',reason:v.reason||'',out:outN(v.outcome),prio:v.prio||'',conf:v.conf||null};$('aMeet').checked=!!v.meetOk;syncA();$('aTitle').textContent='تعديل زيارة '+v.name;$('aSave').textContent='حفظ التعديل';window.scrollTo({top:0,behavior:'smooth'})}
+    aStartAt=v.startAt||null;setTimeout(updateATimer,0);aF={status:v.status||'done',reason:v.reason||'',out:outN(v.outcome),prio:v.prio||'',conf:v.conf||null};$('aMeet').checked=!!v.meetOk;syncA();$('aTitle').textContent='تعديل زيارة '+v.name;$('aSave').textContent='حفظ التعديل';window.scrollTo({top:0,behavior:'smooth'})}
   if(dl){if(!dl.dataset.sure){dl.dataset.sure=1;dl.textContent='تأكيد الحذف';setTimeout(()=>{if(dl.isConnected){delete dl.dataset.sure;dl.textContent='حذف'}},4000);return}delVisit(dl.dataset.ad)}});
 function openAdhoc(c){show('adhoc');aReset();if(c){if(c.nextRep)$('aRep').value=c.nextRep;$('aName').value=c.name;$('aName').dispatchEvent(new Event('input'));$('aNotes').focus()}else $('aName').focus()}
 
@@ -874,7 +890,7 @@ async function loadLive(){if(!LM)return;const d=$('lvDate').value||iso(today()),
   LL.clearLayers();const all=[],list=[];
   S.settings.reps.forEach((rp,i)=>{const pts=by[rp.id]||[],col=LCOL[i%LCOL.length];
     Object.values(S.plans).filter(p=>p.date===d&&p.rep===rp.id).forEach(p=>p.stops.forEach((s,k)=>{if(s.lat!=null){all.push([s.lat,s.lng]);
-      L.circleMarker([s.lat,s.lng],{radius:7,color:'#6b7280',weight:2,fillColor:s.status==='done'?'#16a34a':s.status==='notdone'?'#ef4444':'#d1d5db',fillOpacity:.9}).addTo(LL).bindPopup('<b>'+esc(s.name)+'</b><br>'+esc(rp.name)+' · '+(s.status==='done'?'تمت':s.status==='notdone'?'لم تتم':'لم تتم زيارتها بعد'))}}));
+      L.circleMarker([s.lat,s.lng],{radius:7,color:'#6b7280',weight:2,fillColor:s.status==='done'?'#16a34a':s.status==='notdone'?'#ef4444':'#d1d5db',fillOpacity:.9}).addTo(LL).bindPopup('<b>'+esc(s.name)+'</b><br>'+esc(rp.name)+' · '+(s.status==='done'?'تمت':s.status==='notdone'?'لم تتم':'لم تتم زيارتها بعد')+(s.startAt?'<br>بدأت '+hhmm(s.startAt)+(s.endAt?' · انتهت '+hhmm(s.endAt)+' · '+durTxt(durMin(s.startAt,s.endAt)):''):''))}}));
     if(!pts.length){if(sel==='*'||sel===rp.id)list.push(`<div class="item"><span class="n" style="background:#9aa8a2">${esc(rp.name.trim()[0]||'؟')}</span><div><b>${esc(rp.name)}</b><small>لا توجد نقاط تتبع في هذا اليوم</small></div></div>`);return}
     const ll=pts.map(p=>[p.lat,p.lng]);ll.forEach(x=>all.push(x));L.polyline(ll,{color:col,weight:4,opacity:.85}).addTo(LL);
     L.circleMarker(ll[0],{radius:5,color:col,fillColor:'#fff',fillOpacity:1,weight:2}).addTo(LL).bindTooltip('بداية '+rp.name+' '+hhmm(pts[0].t));
