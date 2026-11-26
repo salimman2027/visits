@@ -342,10 +342,10 @@ input:focus,textarea:focus,select:focus{border-color:#0b5cad}
 <!-- ============ SETTINGS ============ -->
 <section class="tab" id="t-live"><div class="slip"><h2>خريطة المناديب</h2>
   <div class="two"><div class="f"><label for="lvDate">اليوم</label><input type="date" id="lvDate"></div><div class="f"><label for="lvRep">المندوب</label><select id="lvRep"></select></div></div>
-  <div class="wrapr"><button class="btn pri" id="lvRef">تحديث</button><label class="wrapr" style="font-weight:600"><input type="checkbox" id="lvAuto" checked style="width:auto;min-height:0"> تحديث تلقائي كل نصف دقيقة</label></div>
+  <div class="wrapr"><button class="btn pri" id="lvRef">تحديث</button><label class="wrapr" style="font-weight:600"><input type="checkbox" id="lvTrk" style="width:auto;min-height:0"> تفعيل تتبع GPS للمناديب (اختياري)</label><label class="wrapr" style="font-weight:600"><input type="checkbox" id="lvAuto" checked style="width:auto;min-height:0"> تحديث تلقائي كل نصف دقيقة</label></div>
   <div id="lvMap" dir="ltr" style="height:62vh;min-height:360px;border-radius:12px;margin-top:10px;border:1px solid var(--line)"></div>
   <div id="lvList" style="margin-top:12px"></div>
-  <div class="hint">الخط الملوّن هو مسار المندوب، والدايرة الكبيرة آخر موقع. الدواير الرمادية هي عملاء الخطة. التتبع شغال طول ما التطبيق مفتوح عند المندوب والشاشة منوّرة.</div></div></section>
+  <div class="hint">خط السير مرسوم من زيارات المندوب بالترتيب (١، ٢، ٣…) بالخط الملوّن حسب وقت الزيارة، ومكان كل زيارة هو الموقع اللي سجّله المندوب من موبايله. الخط المتقطع الرمادي هو الزيارات اللي لسه ما اتعملتش. تتبع GPS اختياري وبيشتغل بس لو فعّلته وطول ما التطبيق مفتوح عند المندوب.</div></div></section>
 <section class="tab" id="t-users"><div class="slip"><h2>المناديب والحسابات</h2>
   <div class="row"><input id="uName" placeholder="اسم مندوب جديد"><button class="btn pri" id="uAdd">إضافة</button></div>
   <div id="uList" style="margin-top:12px"></div><div class="hint">لكل مندوب يوزر وكلمة سر (٦ حروف على الأقل). المندوب يشوف زياراته فقط.</div></div></section>
@@ -841,7 +841,7 @@ async function clearDemo(){const cs=S.clients.filter(c=>c.demo),ps=Object.values
 $('demo').addEventListener('click',loadDemo);$('demoClear').addEventListener('click',clearDemo);
 
 /* ================= render + boot ================= */
-function renderData(){if(cur==='clients')renderClients();else{const secs=[...new Set(S.clients.map(c=>c.sector).filter(Boolean))].sort();fillSel($('pSec'),secs,'كل القطاعات')}
+function renderData(){if(ME.role==='rep')startTracking();if(cur==='clients')renderClients();else{const secs=[...new Set(S.clients.map(c=>c.sector).filter(Boolean))].sort();fillSel($('pSec'),secs,'كل القطاعات')}
   if(cur==='dash')renderDash();if(cur==='plan')renderPlan();if(cur==='rep')renderRep();if(cur==='adhoc')renderAdhoc();if(cur==='report')renderReport();if(cur==='settings')renderSettings();if(cur==='users')renderUsers();if(cur==='teams')renderTeams();renderBadge();
   $('sub').textContent=S.clients.length+' عميل مرشح · '+S.settings.reps.length+' مندوب · '+Object.values(S.plans).filter(p=>p.date===iso(today())).reduce((a,p)=>a+p.stops.length,0)+' زيارة اليوم'}
 $('pDate').value=iso(addD(1));$('rDate').value=iso(today());$('xDate').value=iso(today());$('aDate').value=iso(today());
@@ -890,28 +890,45 @@ function applyRole(){$('logout').hidden=false;startTracking();$('chpw').hidden=f
 let LM=null,LL=null,LT=null;const LCOL=['#d62828','#1d4ed8','#15803d','#c2410c','#7e22ce','#0e7490','#a16207','#be185d'];
 function initLive(){if(!window.LF){toast('تعذّر تحميل الخريطة، اتأكد من الإنترنت',1);return}
   if(!$('lvDate').value)$('lvDate').value=iso(today());
-  const cv=$('lvRep').value;$('lvRep').innerHTML='<option value="*">كل المناديب</option>'+S.settings.reps.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');$('lvRep').value=cv||'*';
+  const cv=$('lvRep').value;$('lvRep').innerHTML='<option value="*">كل المناديب</option>'+S.settings.reps.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');$('lvRep').value=cv||'*';$('lvTrk').checked=!!S.settings.track;
   if(!LM){LM=LF.map('lvMap').setView([24.7136,46.6753],10);LF.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(LM);LL=LF.layerGroup().addTo(LM)}
   setTimeout(()=>LM.invalidateSize(),150);loadLive();
   clearInterval(LT);LT=setInterval(()=>{if(cur==='live'&&$('lvAuto').checked&&!document.hidden)loadLive()},30000)}
 const hhmm=t=>new Date(t).toLocaleTimeString('ar',{hour:'2-digit',minute:'2-digit'});
-async function loadLive(){if(!LM)return;const d=$('lvDate').value||iso(today()),f=new Date(d+'T00:00:00'),t=new Date(f.getTime()+86400000);
-  let rows=[];try{rows=await api('GET','track?from='+encodeURIComponent(f.toISOString())+'&to='+encodeURIComponent(t.toISOString()))}catch(e){toast('تعذّر تحميل المسارات ('+(e&&e.status||'')+') '+(e&&e.text||''),1);return}
-  const sel=$('lvRep').value,by={};rows.forEach(r=>{if(sel==='*'||sel===r.rep)(by[r.rep]=by[r.rep]||[]).push(r)});
+async function loadLive(){if(!LM)return;const d=$('lvDate').value||iso(today()),sel=$('lvRep').value;
+  let rows=[];
+  if(S.settings.track){const f=new Date(d+'T00:00:00'),t=new Date(f.getTime()+86400000);
+    try{rows=await api('GET','track?from='+encodeURIComponent(f.toISOString())+'&to='+encodeURIComponent(t.toISOString()))}catch(e){toast('تعذّر تحميل مسار GPS ('+(e&&e.status||'')+') '+(e&&e.text||''),1)}}
+  const by={};rows.forEach(r=>{(by[r.rep]=by[r.rep]||[]).push(r)});
   LL.clearLayers();const all=[],list=[];
-  S.settings.reps.forEach((rp,i)=>{const pts=by[rp.id]||[],col=LCOL[i%LCOL.length];
-    Object.values(S.plans).filter(p=>p.date===d&&p.rep===rp.id).forEach(p=>p.stops.forEach((s,k)=>{if(s.lat!=null){all.push([s.lat,s.lng]);
-      LF.circleMarker([s.lat,s.lng],{radius:7,color:'#6b7280',weight:2,fillColor:s.status==='done'?'#16a34a':s.status==='notdone'?'#ef4444':'#d1d5db',fillOpacity:.9}).addTo(LL).bindPopup('<b>'+esc(s.name)+'</b><br>'+esc(rp.name)+' · '+(s.status==='done'?'تمت':s.status==='notdone'?'لم تتم':'لم تتم زيارتها بعد')+(s.startAt?'<br>بدأت '+hhmm(s.startAt)+(s.endAt?' · انتهت '+hhmm(s.endAt)+' · '+durTxt(durMin(s.startAt,s.endAt)):''):''))}}));
-    if(!pts.length){if(sel==='*'||sel===rp.id)list.push(`<div class="item"><span class="n" style="background:#9aa7b8">${esc(rp.name.trim()[0]||'؟')}</span><div><b>${esc(rp.name)}</b><small>لا توجد نقاط تتبع في هذا اليوم</small></div></div>`);return}
-    const ll=pts.map(p=>[p.lat,p.lng]);ll.forEach(x=>all.push(x));LF.polyline(ll,{color:col,weight:4,opacity:.85}).addTo(LL);
-    LF.circleMarker(ll[0],{radius:5,color:col,fillColor:'#fff',fillOpacity:1,weight:2}).addTo(LL).bindTooltip('بداية '+rp.name+' '+hhmm(pts[0].t));
-    const last=pts[pts.length-1],ago=Math.round((Date.now()-new Date(last.t))/60000),live=d===iso(today())&&ago<=10;
-    LF.circleMarker(ll[ll.length-1],{radius:10,color:'#fff',weight:3,fillColor:col,fillOpacity:1}).addTo(LL).bindTooltip(rp.name+' · '+hhmm(last.t),{permanent:true,direction:'top',offset:[0,-8]});
-    list.push(`<div class="item"><span class="n" style="background:${col}">${esc(rp.name.trim()[0]||'؟')}</span><div><b>${esc(rp.name)}</b><small>${live?'🟢 متصل الآن · ':''}آخر ظهور ${hhmm(last.t)}${d===iso(today())?' (من '+(ago<1?'أقل من دقيقة':ago+' دقيقة')+')':''} · ${pts.length} نقطة</small></div></div>`)});
+  S.settings.reps.forEach((rp,i)=>{if(sel!=='*'&&sel!==rp.id)return;const col=LCOL[i%LCOL.length];
+    const items=[];
+    Object.values(S.plans).filter(p=>p.date===d&&p.rep===rp.id).forEach(p=>p.stops.forEach((s,k)=>items.push({s,ord:k})));
+    S.visits.filter(v=>v.date===d&&v.rep===rp.id).forEach(v=>items.push({s:v,ord:999}));
+    const pos=s=>s.conf&&s.conf.lat!=null?[s.conf.lat,s.conf.lng]:(s.lat!=null?[s.lat,s.lng]:null);
+    const tmv=s=>s.startAt||s.endAt||s.savedAt||0;
+    const done=items.filter(x=>x.s.status).sort((a,b)=>tmv(a.s)-tmv(b.s)),pend=items.filter(x=>!x.s.status).sort((a,b)=>a.ord-b.ord);
+    const gps=by[rp.id]||[];
+    if(gps.length){const gl=gps.map(p=>[p.lat,p.lng]);gl.forEach(x=>all.push(x));LF.polyline(gl,{color:col,weight:2,opacity:.45,dashArray:'2 6'}).addTo(LL)}
+    let n=0,miss=0,dist=0,onsite=0,prev=null;const doneLL=[],lines=[];
+    const mk=(x,isDone)=>{const s=x.s,p=pos(s);if(!p){miss++;return null}n++;all.push(p);
+      LF.marker(p,{icon:LF.divIcon({className:'',iconSize:[28,28],iconAnchor:[14,14],html:`<div style="background:${isDone?col:'#9aa7b8'};color:#fff;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:700 13px sans-serif;border:2px solid #fff;box-shadow:0 1px 5px #0007">${n}</div>`})}).addTo(LL)
+        .bindPopup('<b>'+n+'. '+esc(s.name)+'</b><br>'+esc(rp.name)+' · '+(s.status==='done'?'تمت':s.status==='notdone'?'لم تتم':'لم تتم زيارتها بعد')+(s.startAt?'<br>بدأت '+hhmm(s.startAt)+(s.endAt?' · انتهت '+hhmm(s.endAt)+' · المدة '+durTxt(durMin(s.startAt,s.endAt)):''):(s.savedAt?'<br>سُجلت '+hhmm(s.savedAt):''))+(s.conf&&s.conf.lat!=null?'<br>الموقع من موبايل المندوب':'<br>موقع العميل المسجّل'));
+      return p};
+    done.forEach(x=>{const p=mk(x,true);if(!p)return;doneLL.push(p);if(prev)dist+=km(prev,p);prev=p;const s=x.s,dm=durMin(s.startAt,s.endAt);if(dm)onsite+=dm;
+      lines.push(n+'. '+esc(s.name)+' — '+(s.startAt?hhmm(s.startAt)+(s.endAt?' ← '+hhmm(s.endAt):''):(s.savedAt?hhmm(s.savedAt):''))+(dm?' ('+durTxt(dm)+')':'')+(s.status==='notdone'?' · لم تتم':''))});
+    if(doneLL.length>1)LF.polyline(doneLL,{color:col,weight:4,opacity:.9}).addTo(LL);
+    const pl=[];if(doneLL.length)pl.push(doneLL[doneLL.length-1]);
+    pend.forEach(x=>{const p=mk(x,false);if(p)pl.push(p)});
+    if(pl.length>1)LF.polyline(pl,{color:'#7b8aa0',weight:3,opacity:.8,dashArray:'8 8'}).addTo(LL);
+    if(gps.length){const lp=gps[gps.length-1],ago=Math.round((Date.now()-new Date(lp.t))/60000);LF.circleMarker([lp.lat,lp.lng],{radius:9,color:'#fff',weight:3,fillColor:col,fillOpacity:1}).addTo(LL).bindTooltip(rp.name+' · '+hhmm(lp.t));lines.push('📍 آخر موقع GPS '+hhmm(lp.t)+(d===iso(today())?' (من '+(ago<1?'أقل من دقيقة':ago+' دقيقة')+')':''))}
+    const total=items.length;
+    list.push(`<div class="item"><span class="n" style="background:${col}">${esc(rp.name.trim()[0]||'؟')}</span><div><b>${esc(rp.name)}</b><small>${done.length} من ${total} زيارة${total?'':' — لا توجد خطة أو زيارات في هذا اليوم'}${doneLL.length>1?' · المسافة بين الزيارات حوالي '+dist.toFixed(1)+' كم':''}${onsite?' · الوقت داخل الزيارات '+durTxt(onsite):''}${miss?' · '+miss+' بدون إحداثيات':''}${lines.length?'<br>'+lines.join('<br>'):''}</small></div></div>`)});
   $('lvList').innerHTML=list.join('')||'<div class="empty">لا يوجد مناديب</div>';
   if(all.length&&!LM._fitDone){LM.fitBounds(all,{padding:[30,30],maxZoom:16});LM._fitDone=1}}
+$('lvTrk').addEventListener('change',()=>{S.settings.track=$('lvTrk').checked;putSettings();loadLive()});
 $('lvRef').addEventListener('click',()=>{LM&&(LM._fitDone=0);loadLive()});$('lvDate').addEventListener('change',()=>{LM&&(LM._fitDone=0);loadLive()});$('lvRep').addEventListener('change',()=>{LM&&(LM._fitDone=0);loadLive()});
-function startTracking(){if(!navigator.geolocation||ME.role!=='rep'||window.__trk)return;window.__trk=1;let last=0,lp=null;
+function startTracking(){if(!S.settings.track||!navigator.geolocation||ME.role!=='rep'||window.__trk)return;window.__trk=1;let last=0,lp=null;
   const dist=(a,b)=>{const R=6371000,r=x=>x*Math.PI/180,dl=r(b.latitude-a.latitude),dn=r(b.longitude-a.longitude),q=Math.sin(dl/2)**2+Math.cos(r(a.latitude))*Math.cos(r(b.latitude))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(q))};
   navigator.geolocation.watchPosition(p=>{const c=p.coords,n=Date.now();if(n-last<20000)return;if(n-last<60000&&lp&&dist(lp,c)<100)return;last=n;lp={latitude:c.latitude,longitude:c.longitude};
     api('POST','track',{lat:c.latitude,lng:c.longitude,acc:c.accuracy}).then(()=>{$('trkInd').hidden=false}).catch(()=>{})},()=>{},{enableHighAccuracy:true,maximumAge:30000,timeout:30000})}
