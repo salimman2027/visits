@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script><script>window.LF=window.L</script>
 <link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#071b3a"><link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
 <style>
 /* VOICE: field-sales tool — calm, fast, thumb-sized, Arabic first.
    IDEA: a sales route book: candidate list → day plan → one visit slip at a time → end-of-day sheet.
@@ -153,7 +153,7 @@ input:focus,textarea:focus,select:focus{border-color:#0b5cad}
 body{font:15.5px/1.65 "Readex Pro",system-ui,sans-serif}
 h1,h2,h3{font-family:"Readex Pro",sans-serif;letter-spacing:0}
 .top{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:26px max(4vw,18px);background:var(--navy);position:relative;overflow:hidden;min-height:116px}
-.top::before{content:"";position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='560' height='140' viewBox='0 0 560 140'%3E%3Cpath d='M10 112C90 112 100 40 185 44S285 116 360 84S470 22 548 34' fill='none' stroke='%232b6dff' stroke-width='3' stroke-dasharray='2 9' stroke-linecap='round'/%3E%3Cpath d='M10 112C90 112 100 40 185 44' fill='none' stroke='%232b6dff' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='10' cy='112' r='6' fill='%23fff'/%3E%3Ccircle cx='185' cy='44' r='9' fill='%2319b37a' stroke='%23071b3a' stroke-width='3'/%3E%3Ccircle cx='360' cy='84' r='15' fill='%23ffc928' opacity='.22'/%3E%3Ccircle cx='360' cy='84' r='7' fill='%23ffc928'/%3E%3Ccircle cx='548' cy='34' r='6' fill='none' stroke='%238ea3c3' stroke-width='2'/%3E%3C/svg%3E") no-repeat left 2% center/auto 118%;pointer-events:none}
+.top::before{content:"";position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='560' height='140' viewBox='0 0 560 140'%3E%3Cpath d='M10 112C90 112 100 40 185 44S285 116 360 84S470 22 548 34' fill='none' stroke='%23c8a96a' stroke-width='3' stroke-dasharray='2 9' stroke-linecap='round'/%3E%3Cpath d='M10 112C90 112 100 40 185 44' fill='none' stroke='%23c8a96a' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='10' cy='112' r='6' fill='%23fff'/%3E%3Ccircle cx='185' cy='44' r='9' fill='%2319b37a' stroke='%23071b3a' stroke-width='3'/%3E%3Ccircle cx='360' cy='84' r='15' fill='%23ffc928' opacity='.22'/%3E%3Ccircle cx='360' cy='84' r='7' fill='%23ffc928'/%3E%3Ccircle cx='548' cy='34' r='6' fill='none' stroke='%238ea3c3' stroke-width='2'/%3E%3C/svg%3E") no-repeat left 2% center/auto 118%;pointer-events:none}
 .top>*{position:relative}
 .top h1{font:600 clamp(21px,3.4vw,28px)/1.25 "Readex Pro",sans-serif}
 .top p{margin:4px 0 0;color:#8ea3c3;font-size:13.5px;font-weight:300}
@@ -214,6 +214,59 @@ input:focus,textarea:focus,select:focus{border-color:var(--g2);outline:3px solid
 .sheet .hd,.ot thead th{background:var(--navy)}.k5{background:#1f6bff}.sheet h2.sec{border-inline-start-color:#1f6bff}.callout{border-color:#1f6bff}
 .empty{border-radius:16px}
 #lvMap{border:1px solid var(--line)}
+
+/* ===== v4 · فخامة هادئة: حبر ليلي، نحاس ذهبي، خط نسخ للعناوين ===== */
+:root{--bg:light-dark(#f1f3f6,#060c18);--ink:light-dark(#0f1726,#eef1f6);--mute:light-dark(#64708a,#8f9db6);
+--g2:light-dark(#0f2747,#c8a96a);--on:light-dark(#fff,#0b1220);--acc:light-dark(#8a6a22,#d9c08a);--lime:light-dark(#f1ebdc,#18203a);
+--slip:light-dark(#fff,#0d1527);--line:light-dark(#e2e6ee,#1b263f);--field:light-dark(#f6f7fa,#091020);--brass:#c8a96a;--navy:#070f22}
+body{background:var(--bg)}
+.top{background:radial-gradient(760px 240px at 88% -60%,#24407f66,transparent 70%),#070f22;box-shadow:inset 0 -1px 0 #c8a96a40;min-height:124px}
+.top h1{font:700 clamp(26px,4vw,36px)/1.2 Amiri,serif;color:#f6efe0}
+.top p{color:#9aa8c4}
+.tacts button{border-color:#c8a96a55;color:#f1e6cc;background:#c8a96a14}
+.tacts button:hover:not(:disabled){background:#c8a96a2b}
+nav.tabs{background:linear-gradient(180deg,#0a1630,#060d1c)}
+nav.tabs button{color:#97a6c3}
+nav.tabs button[aria-current=page]{color:#f6e7c1;background:#c8a96a1c}
+nav.tabs button[aria-current=page] .ic{color:var(--brass)}
+nav.tabs .badge{background:var(--brass);color:#0b1220}
+@media(min-width:980px){
+ nav.tabs{border-inline-end:1px solid #c8a96a33}
+ nav.tabs .mark{background:linear-gradient(135deg,#e0c88f,#a8812f);color:#0b1220;border-radius:14px;box-shadow:0 6px 18px -6px #c8a96a99}
+ nav.tabs button[aria-current=page]{box-shadow:inset 3px 0 0 var(--brass)}
+}
+@media(max-width:979px){nav.tabs{border-top:1px solid #c8a96a33}}
+.slip{border-radius:20px;box-shadow:0 26px 50px -34px light-dark(#0a1937a6,#000000b0)}
+.slip>h2{font:700 24px/1.3 Amiri,serif}
+.cur h2,.sheet h1{font-family:Amiri,serif}
+.cur{border:1px solid var(--brass);box-shadow:0 0 0 4px #c8a96a1f}
+input,textarea,select{background:var(--field);border-radius:12px}
+input:focus,textarea:focus,select:focus{border-color:var(--brass);outline:3px solid #c8a96a40}
+.btn{border-radius:12px}
+.btn:hover{border-color:var(--brass)}
+.btn.pri{background:var(--g2);border-color:var(--g2);color:var(--on);font-weight:600}
+.btn.pri:hover{filter:brightness(1.12);border-color:var(--g2)}
+.seg button[aria-pressed=true]{background:var(--g2);border-color:var(--g2);color:var(--on)}
+.seg button.no[aria-pressed=true]{background:var(--coral);border-color:var(--coral);color:#fff}
+.figs div{border:1px solid var(--line);border-top:1px solid var(--line);background:var(--slip);border-radius:16px;padding:16px 16px 14px;position:relative}
+.figs div::before{content:"";position:absolute;inset-inline-start:16px;top:0;width:28px;height:3px;border-radius:0 0 3px 3px;background:var(--brass)}
+.figs b{font:300 46px/1 "Readex Pro",sans-serif;letter-spacing:-.03em}
+.figs .bad{border-top-color:var(--line)}.figs .bad::before{background:var(--coral)}
+@media(max-width:560px){.figs b{font-size:34px}}
+.n{background:var(--g2);color:var(--on);border-radius:12px}
+.n.done{background:var(--mint);color:#fff}.n.no{background:var(--coral);color:#fff}
+.chip{background:var(--lime);color:var(--acc)}
+.chip.ok{background:var(--mint);color:#fff}
+.bar i{background:var(--brass)}
+.item{border-top-color:var(--line)}
+.grp.now{border-inline-start-color:var(--brass)}
+.sheet .hd,.ot thead th{background:var(--navy)}
+.sheet .hd{box-shadow:inset 0 -3px 0 var(--brass)}
+.k5{background:var(--navy)}.sheet h2.sec{border-inline-start-color:var(--brass)}.callout{border-color:var(--brass)}
+.badge{background:var(--coral)}
+.live{background:var(--navy);border:1px solid #c8a96a55}.live .btn{background:var(--brass);color:#0b1220}
+.toast{background:#0b1220;color:#f6efe0;border:1px solid #c8a96a66}
+::selection{background:#c8a96a66}
 </style>
 </head>
 <body class="nomic">
