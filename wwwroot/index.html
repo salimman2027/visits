@@ -203,7 +203,7 @@ input:focus,textarea:focus,select:focus{border-color:#0b5cad}
 
   <div class="slip">
     <h2>استيراد من Excel</h2>
-    <div class="wrapr"><span class="btn pri file">ارفع ملف Excel<input type="file" id="xIn" accept=".xlsx,.xls,.csv"></span><button type="button" class="btn" id="xTpl">نسخ قالب الأعمدة</button></div>
+    <div class="wrapr"><span class="btn pri file">ارفع ملف Excel<input type="file" id="xIn" accept=".xlsx,.xls,.csv"></span><button type="button" class="btn" id="xDl">⬇ تنزيل قالب Excel فاضي</button><button type="button" class="btn" id="xTpl">نسخ قالب الأعمدة</button></div>
     <div class="hint">الأعمدة: اسم العميل، التليفون، الموقع (عنوان أو رابط أو إحداثيات)، القطاع، الحجم أو عدد الموظفين.</div>
     <div id="xMap" hidden style="margin-top:12px"><div class="two" id="xSel"></div><button type="button" class="btn pri full" id="xGo">استيراد العملاء</button></div>
     <div class="msg" id="xMsg" role="status"></div>
@@ -569,6 +569,8 @@ $('xIn').addEventListener('change',async e=>{const f=e.target.files[0];e.target.
     xCols=Object.keys(xRows[0]);const used=new Set();
     $('xSel').innerHTML=XF.map(([k,l,re])=>{const c=xCols.find(c=>!used.has(c)&&re.test(norm(c).toLowerCase()));if(c)used.add(c);return`<div class="f"><label for="x_${k}">${l}</label><select id="x_${k}"><option value="">— لا يوجد —</option>${xCols.map(o=>`<option ${o===c?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`}).join('');
     $('xMap').hidden=false;msg('xMsg',xRows.length+' صف في «'+f.name+'» — راجع الأعمدة واضغط استيراد')}catch{msg('xMsg','تعذّر قراءة الملف. تأكد إنه Excel أو CSV ومتصل بالنت.',1)}});
+$('xDl').addEventListener('click',async()=>{try{await loadXLSX();const ws=XLSX.utils.aoa_to_sheet([XF.map(x=>x[1])]);ws['!cols']=[30,16,40,14,14,22,12,14].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new();wb.Workbook={Views:[{RTL:true}]};XLSX.utils.book_append_sheet(wb,ws,'العملاء');XLSX.writeFile(wb,'قالب-العملاء.xlsx')}catch{msg('xMsg','تعذّر تنزيل القالب، اتأكد من الإنترنت',1)}});
 $('xGo').addEventListener('click',async()=>{const g=k=>$('x_'+k).value,v=(r,k)=>g(k)?String(r[g(k)]||'').trim():'';if(!g('name')){msg('xMsg','اختر عمود اسم العميل',1);return}
   let n=0,u=0;const byName=new Map(S.clients.map(c=>[norm(c.name)+'|'+digits(c.phone),c]));
   for(const r of xRows){const name=v(r,'name');if(!name)continue;const loc=v(r,'loc');let c=null;const la=parseFloat(v(r,'lat')),ln=parseFloat(v(r,'lng'));if(!isNaN(la)&&!isNaN(ln))c=[la,ln];c=c||coords(loc);
