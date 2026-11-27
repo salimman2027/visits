@@ -915,7 +915,7 @@ function showLogin(){if($('login'))return;const pe=lsGet('fv-err','');localStora
   $('lEye').onclick=()=>{const s=$('lP').type==='password';$('lP').type=s?'text':'password';$('lEye').textContent=s?'🙈':'👁'};if(pe)$('lMsg').textContent='السيرفر رفض الجلسة بعد الدخول ('+pe+')';$('lGo').onclick=go;$('lP').addEventListener('keydown',e=>{if(e.key==='Enter')go()})}
 async function api(method,path,body){
   const r=await fetch('api/'+path,{method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+(lsGet(AK,'')||'')},body:body===undefined?undefined:JSON.stringify(body)});
-  if(r.status===401){localStorage.removeItem(AK);lsSet('fv-err',method+' '+path);showLogin();throw{code:'unauthorized'}}
+  if(r.status===401){try{window.FVNative&&FVNative.stop()}catch{}localStorage.removeItem(AK);lsSet('fv-err',method+' '+path);showLogin();throw{code:'unauthorized'}}
   if(r.status===409)throw{code:'conflict'};
   if(!r.ok){let tx='';try{tx=(await r.text()).slice(0,160)}catch{}throw{code:r.status===413?'quota_exceeded':'invalid_argument',status:r.status,text:tx}}
   return r.status===204?null:r.json()}
@@ -933,7 +933,7 @@ function makeApiDb(){
       onSnapshot:(ok,err)=>sub(d=>({exists:!!d.settings,data:()=>d.settings}),ok,err),
       set:b=>api('PUT',c+'/'+encodeURIComponent(id),b),
       delete:()=>api('DELETE',c+'/'+encodeURIComponent(id))}}}}
-function applyRole(){$('logout').hidden=false;startTracking();$('chpw').hidden=false;if(lsGet('fv-warn',0)){localStorage.removeItem('fv-warn');setTimeout(()=>toast('كلمة السر افتراضية، غيّرها من زر كلمة السر',1),800)}
+function applyRole(){$('logout').hidden=false;startTracking();try{if(window.FVNative){if(ME.role==='rep')FVNative.start(lsGet(AK,'')||'');else FVNative.stop()}}catch{}$('logout').addEventListener('click',()=>{try{window.FVNative&&FVNative.stop()}catch{}});$('chpw').hidden=false;if(lsGet('fv-warn',0)){localStorage.removeItem('fv-warn');setTimeout(()=>toast('كلمة السر افتراضية، غيّرها من زر كلمة السر',1),800)}
   $('chpw').onclick=async()=>{const o=prompt('كلمة السر الحالية');if(!o)return;const n=prompt('كلمة السر الجديدة (٦ حروف على الأقل)');if(!n)return;try{await api('POST','password',{old:o,new:n});toast('تم تغيير كلمة السر')}catch{toast('كلمة السر الحالية غلط أو الجديدة قصيرة',1)}};$('logout').onclick=()=>{localStorage.removeItem(AK);localStorage.removeItem('fv-me2');location.reload()};
   if(ME.role==='rep'){['live','users','teams','settings'].forEach(x=>document.querySelector('#tabs [data-tab="'+x+'"]').hidden=true);
     const o=repOptions;repOptions=function(s,all){o(s,all);s.value=ME.repId;s.disabled=true}}}
@@ -1013,7 +1013,7 @@ $('lvList').addEventListener('click',e=>{const f=e.target.closest('[data-focus]'
 $('lvLim').addEventListener('change',()=>{S.settings.speedLimit=Math.max(30,+$('lvLim').value||120);putSettings();refreshLv()});
 $('lvTrk').addEventListener('change',()=>{S.settings.track=$('lvTrk').checked;putSettings();refreshLv()});
 $('lvRef').addEventListener('click',()=>{LM&&(LM._fitDone=0);refreshLv()});$('lvDate').addEventListener('change',()=>{LM&&(LM._fitDone=0);refreshLv()});$('lvRep').addEventListener('change',()=>{LM&&(LM._fitDone=0);refreshLv()});
-function startTracking(){if(S.settings.track===false||!navigator.geolocation||ME.role!=='rep'||window.__trk)return;window.__trk=1;let last=0,lp=null,lt=0;
+function startTracking(){if(window.FVNative)return;if(S.settings.track===false||!navigator.geolocation||ME.role!=='rep'||window.__trk)return;window.__trk=1;let last=0,lp=null,lt=0;
   const dist=(a,b)=>{const R=6371000,r=x=>x*Math.PI/180,dl=r(b.latitude-a.latitude),dn=r(b.longitude-a.longitude),q=Math.sin(dl/2)**2+Math.cos(r(a.latitude))*Math.cos(r(b.latitude))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(q))};
   navigator.geolocation.watchPosition(p=>{const c=p.coords,n=Date.now();if(n-last<5000)return;if(n-last<30000&&lp&&dist(lp,c)<8)return;let sp=c.speed!=null&&c.speed>=0?c.speed*3.6:(lp&&lt&&n>lt?dist(lp,c)/((n-lt)/1000)*3.6:null);last=n;lt=n;lp={latitude:c.latitude,longitude:c.longitude};
     api('POST','track',{lat:c.latitude,lng:c.longitude,acc:c.accuracy,speed:sp!=null?Math.round(sp*10)/10:null}).then(()=>{$('trkInd').hidden=false}).catch(()=>{})},()=>{},{enableHighAccuracy:true,maximumAge:0,timeout:30000})}

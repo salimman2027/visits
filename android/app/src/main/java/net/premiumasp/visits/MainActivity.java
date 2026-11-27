@@ -16,7 +16,9 @@ public class MainActivity extends Activity {
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
-        requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA}, 1);
+        java.util.ArrayList<String> need = new java.util.ArrayList<>(java.util.Arrays.asList(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA));
+        if (android.os.Build.VERSION.SDK_INT >= 33) need.add(Manifest.permission.POST_NOTIFICATIONS);
+        requestPermissions(need.toArray(new String[0]), 1);
         web = new WebView(this);
         setContentView(web);
         WebSettings s = web.getSettings();
@@ -63,7 +65,39 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
+        web.addJavascriptInterface(new Object() {
+            @JavascriptInterface public void start(String tok) {
+                getSharedPreferences("fv", MODE_PRIVATE).edit().putString("tok", tok).apply();
+                runOnUiThread(() -> startTrack());
+            }
+            @JavascriptInterface public void stop() {
+                getSharedPreferences("fv", MODE_PRIVATE).edit().remove("tok").apply();
+                stopService(new Intent(MainActivity.this, TrackService.class));
+            }
+        }, "FVNative");
         web.loadUrl(URL);
+    }
+
+    boolean askedBg = false;
+    void startTrack() {
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return;
+        if (android.os.Build.VERSION.SDK_INT >= 29 && !askedBg
+                && checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            askedBg = true;
+            android.widget.Toast.makeText(this, "اختر «السماح طوال الوقت» للموقع عشان التتبع يشتغل والتطبيق مقفول", android.widget.Toast.LENGTH_LONG).show();
+            requestPermissions(new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, 3);
+        }
+        try { startForegroundService(new Intent(this, TrackService.class)); } catch (Exception ignored) {}
+        try {
+            android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+            if (!pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                startActivity(new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName())));
+            }
+        } catch (Exception ignored) {}
+    }
+
+    @Override public void onRequestPermissionsResult(int req, String[] p, int[] r) {
+        if (req == 1 && getSharedPreferences("fv", MODE_PRIVATE).contains("tok")) startTrack();
     }
 
     @Override protected void onActivityResult(int req, int res, Intent d) {
