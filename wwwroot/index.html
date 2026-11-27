@@ -139,6 +139,12 @@ nav.tabs button[aria-current=page]{border-color:#7fb4ff}
 .btn.pri:hover{filter:brightness(1.08)}
 input:focus,textarea:focus,select:focus{border-color:#0b5cad}
 .seg button[aria-pressed=true]{background:#0b4f9e;border-color:#0b4f9e}
+
+.lvdot{position:relative;display:flex;align-items:center;gap:6px;direction:rtl;white-space:nowrap}
+.lvdot i{display:block;width:20px;height:20px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 6px #0008;background:#64748b;flex:none}
+.lvdot.move i{background:#facc15;animation:lvp 1.4s infinite}.lvdot.off i{background:#cbd5e1}
+.lvdot b{background:#fff;border:1px solid #cfd8e3;border-radius:10px;padding:1px 7px;font:700 12px sans-serif;box-shadow:0 1px 4px #0003}
+@keyframes lvp{0%{box-shadow:0 0 0 0 #facc15cc}100%{box-shadow:0 0 0 16px #facc1500}}
 </style>
 </head>
 <body class="nomic">
@@ -273,6 +279,12 @@ input:focus,textarea:focus,select:focus{border-color:#0b5cad}
       <div class="f"><label for="cNextNote">الخطوة التالية</label><div class="row"><input id="cNextNote" placeholder="مثلًا: تحديد اجتماع مع التنفيذي، ديمو أونلاين"><button type="button" class="mic" data-mic="cNextNote" data-kind="replace" aria-label="قل الخطوة التالية"></button></div></div>
       <label class="f" style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="cMeet" class="chk"> الموعد مؤكد مع العميل (اجتماع مؤكد)</label>
     </div>
+    <div class="f" id="cMsgBox" hidden><span class="lbl">بعد الزيارة: رسالة شكر / تأكيد بالرمز</span>
+      <div class="wrapr"><button type="button" class="btn" id="cThank">💬 إرسال رسالة شكر للعميل (واتساب)</button><span class="hint" id="cThankTxt"></span></div>
+      <label style="display:flex;gap:8px;align-items:center;font-weight:600;margin-top:8px"><input type="checkbox" id="cOtpNeed" class="chk"> العميل يحتاج رمز تأكيد (OTP) لتأكيد الزيارة</label>
+      <div id="cOtpBox" hidden style="margin-top:8px"><div class="wrapr"><button type="button" class="btn" id="cOtpSend">🔐 إرسال الرمز للعميل (واتساب)</button></div>
+        <div class="row" style="margin-top:6px"><input id="cOtpIn" inputmode="numeric" maxlength="4" placeholder="اكتب الرمز اللي العميل بلّغك به"><button type="button" class="btn pri" id="cOtpChk">تحقق</button></div></div>
+      <div class="hint" id="cOtpTxt"></div></div>
     <div class="msg" id="cMsg" role="status"></div>
     <button type="button" class="btn pri full" id="cSave">حفظ والانتقال للزيارة التالية</button>
   </div>
@@ -342,11 +354,13 @@ input:focus,textarea:focus,select:focus{border-color:#0b5cad}
 
 <!-- ============ SETTINGS ============ -->
 <section class="tab" id="t-live"><div class="slip"><h2>خريطة المناديب</h2>
-  <div class="two"><div class="f"><label for="lvDate">اليوم</label><input type="date" id="lvDate"></div><div class="f"><label for="lvRep">المندوب</label><select id="lvRep"></select></div></div>
-  <div class="wrapr"><button class="btn pri" id="lvRef">تحديث</button><label class="wrapr" style="font-weight:600"><input type="checkbox" id="lvTrk" style="width:auto;min-height:0"> تتبع GPS والسرعة</label><label class="wrapr" style="font-weight:600">حد السرعة <input type="number" id="lvLim" min="30" max="200" style="width:70px;min-height:0"> كم/س</label><label class="wrapr" style="font-weight:600"><input type="checkbox" id="lvAuto" checked style="width:auto;min-height:0"> تحديث تلقائي كل نصف دقيقة</label></div>
+  <div class="seg" id="lvMode" style="margin-bottom:10px"><button type="button" data-v="visits" aria-pressed="true">الزيارات</button><button type="button" data-v="live" aria-pressed="false">التتبع اللحظي</button></div>
+  <div class="two"><div class="f" id="lvDateF"><label for="lvDate">اليوم</label><input type="date" id="lvDate"></div><div class="f"><label for="lvRep">المندوب</label><select id="lvRep"></select></div></div>
+  <div class="wrapr"><button class="btn pri" id="lvRef">تحديث</button><span id="lvLiveOpts" class="wrapr" hidden><label class="wrapr" style="font-weight:600"><input type="checkbox" id="lvTrk" style="width:auto;min-height:0"> تتبع GPS والسرعة</label><label class="wrapr" style="font-weight:600">حد السرعة <input type="number" id="lvLim" min="30" max="200" style="width:70px;min-height:0"> كم/س</label></span><label class="wrapr" style="font-weight:600"><input type="checkbox" id="lvAuto" checked style="width:auto;min-height:0"> تحديث تلقائي</label></div>
   <div id="lvMap" dir="ltr" style="height:62vh;min-height:360px;border-radius:12px;margin-top:10px;border:1px solid var(--line)"></div>
   <div id="lvList" style="margin-top:12px"></div>
-  <div class="hint">خط السير مرسوم من زيارات المندوب بالترتيب (١، ٢، ٣…) بالخط الملوّن حسب وقت الزيارة، ومكان كل زيارة هو الموقع اللي سجّله المندوب من موبايله. الخط المتقطع الرمادي هو الزيارات اللي لسه ما اتعملتش. تتبع GPS اختياري وبيشتغل بس لو فعّلته وطول ما التطبيق مفتوح عند المندوب.</div></div></section>
+  <div class="hint" id="lvVisHint">خط السير مرسوم من زيارات المندوب بالترتيب (١، ٢، ٣…): 🟢 تمت، 🔴 لم تتم، ⚪ لسه. الخط المتقطع للزيارات الباقية. اضغط أي علامة للذهاب للموقع.</div>
+  <div class="hint" id="lvLiveHint" hidden>التتبع اللحظي بيتحدّث كل ٥ ثواني: 🟡 متحرك، ⚪ متوقف، ⚫ غير متصل (آخر تحديث من أكتر من ٣ دقايق). التتبع بيشتغل طول ما تطبيق المندوب مفتوح والشاشة منوّرة.</div></div></section>
 <section class="tab" id="t-users"><div class="slip"><h2>المناديب والحسابات</h2>
   <div class="row"><input id="uName" placeholder="اسم مندوب جديد"><button class="btn pri" id="uAdd">إضافة</button></div>
   <div id="uList" style="margin-top:12px"></div><div class="hint">لكل مندوب يوزر وكلمة سر (٦ حروف على الأقل). المندوب يشوف زياراته فقط.</div></div></section>
@@ -354,6 +368,11 @@ input:focus,textarea:focus,select:focus{border-color:#0b5cad}
   <div class="row"><input id="tName" placeholder="اسم فريق جديد"><button class="btn pri" id="tAdd">إضافة</button></div>
   <div id="tList" style="margin-top:12px"></div><div class="hint">عيّن المندوب لفريقه من شاشة المناديب. الأرقام عن خطط اليوم.</div></div></section>
 <section class="tab" id="t-settings">
+  <div class="slip"><h2>رسائل العميل (واتساب)</h2>
+    <div class="f"><label for="stCc">كود الدولة لأرقام العملاء</label><input id="stCc" inputmode="numeric" dir="ltr" placeholder="966"></div>
+    <div class="f"><label for="stThk">نص رسالة الشكر</label><textarea id="stThk" rows="3"></textarea></div>
+    <div class="f"><label for="stOtp">نص رسالة رمز التأكيد (OTP)</label><textarea id="stOtp" rows="3"></textarea></div>
+    <div class="hint">المتغيرات: {client} اسم العميل، {rep} اسم المندوب، {code} الرمز (في رسالة الـOTP بس).</div></div>
   <div class="slip">
     <h2>المناديب</h2>
     <div id="repList"></div>
@@ -623,20 +642,39 @@ function renderRep(){repOptions($('rRep'));const p=repPlan();const key=$('rRep')
   $('rProg').innerHTML=`<div class="bar"><i style="width:${Math.round((done+nd)/all*100)}%"></i></div><div class="hint">${done+nd} من ${all} · تمت ${done} · لم تتم ${nd}${routeLinks(p.stops.filter(s=>!s.status),null).length?' · <a href="'+esc(routeLinks(p.stops.filter(s=>!s.status),null)[0])+'" target="_blank" rel="noopener">مسار الباقي في الخرائط</a>':''}</div>`;
   if(key!==curKey||curIdx>=all||(curIdx<0&&nextPending(p,0)>=0)){curKey=key;loadStop(p,nextPending(p,0))}
   $('rList').innerHTML=p.stops.map((s,i)=>`<div class="item"><span class="n ${s.status==='done'?'done':s.status==='notdone'?'no':''}">${i+1}</span><div><b>${esc(s.name)}</b><small>${s.status==='done'?'تمت':s.status==='notdone'?'لم تتم'+(s.reason?' — '+esc(s.reason):''):i===curIdx?'الزيارة الحالية':'منتظرة'}${s.startAt&&s.endAt?' · المدة '+durTxt(durMin(s.startAt,s.endAt)):''}${s.next?' · القادمة '+esc(fmt(s.next)):''}</small></div><div class="acts"><a class="btn sm" href="${esc(goUrl(s))}" target="_blank" rel="noopener">اذهب للموقع</a><button class="btn sm" data-open="${i}">${s.status?'تعديل':'فتح'}</button></div></div>`).join('');updateCTimer()}
-function loadStop(p,i){curIdx=i;f={loaded:true,editing:false,status:'',reason:'',photo:null,conf:null};
+function loadStop(p,i){curIdx=i;f={loaded:true,editing:false,status:'',reason:'',photo:null,conf:null,otp:null,thanked:0};
   if(i<0){$('rCur').hidden=true;$('rDone').hidden=false;return}
   $('rDone').hidden=true;$('rCur').hidden=false;const s=p.stops[i];f.editing=!!s.status;
   $('cStep').textContent='زيارة '+(i+1)+' من '+p.stops.length+(s.status?' · تعديل زيارة مسجّلة':'');$('cName').textContent=s.name;
   const c=clientById(s.cid)||{};$('cMeta').innerHTML=[s.sector,s.size].filter(Boolean).map(x=>'<span class="chip">'+esc(x)+'</span>').join('')+(c.lastVisit&&c.lastVisit<p.date?'<span class="chip gray">آخر زيارة '+esc(fmt(c.lastVisit))+'</span>':'');
   $('cAddr').textContent=(s.loc&&!/^https?:/.test(s.loc)?s.loc:'')+(s.lat==null?' — بدون إحداثيات مسجّلة؛ أكّد موقعك وهو يتحفظ للعميل':'');
   $('cGo').href=goUrl(s);$('cTel').hidden=!s.phone;$('cTel').textContent=s.phone||'';$('cTel').href='tel:'+(s.phone||'');
-  f.status=s.status||'';f.reason=s.reason||'';f.out=outN(s.outcome);f.prio=s.prio||'';$('cMeet').checked=!!s.meetOk;f.photo=s.photo||null;f.conf=s.conf||null;
+  f.otp=s.otp?{...s.otp}:null;f.thanked=s.thanked||0;$('cOtpNeed').checked=!!(s.otp&&s.otp.need);$('cOtpIn').value='';f.status=s.status||'';f.reason=s.reason||'';f.out=outN(s.outcome);f.prio=s.prio||'';$('cMeet').checked=!!s.meetOk;f.photo=s.photo||null;f.conf=s.conf||null;
   $('cNotes').value=s.notes||'';$('cNext').value=s.next||'';$('cNextTime').value=s.nextTime||'';$('cNextNote').value=s.nextNote||'';$('cLocMan').value='';syncForm();msg('cMsg','')}
-function syncForm(){$('cStatus').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===f.status));$('cReasonBox').hidden=f.status!=='notdone';
+function syncForm(){$('cMsgBox').hidden=f.status!=='done';const need=$('cOtpNeed').checked;$('cOtpBox').hidden=!need;
+  $('cThankTxt').textContent=f.thanked?'✓ اتفتحت رسالة الشكر '+hhmm(f.thanked):'';
+  $('cOtpTxt').innerHTML=!need?'':f.otp&&f.otp.verified?'✅ تم التحقق من الرمز '+hhmm(f.otp.verifiedAt):f.otp&&f.otp.sentAt?'تم إرسال الرمز '+hhmm(f.otp.sentAt)+' — اطلب من العميل الرمز واكتبه واضغط تحقق (صالح ١٠ دقايق)':'اضغط «إرسال الرمز» وبعدها اكتب الرمز اللي العميل هيبلّغك به. لازم يتأكد قبل الحفظ.';
+$('cStatus').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===f.status));$('cReasonBox').hidden=f.status!=='notdone';
   $('cReason').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===f.reason));
   $('cOutBox').hidden=f.status!=='done';$('cOut').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===f.out));$('cPrioBox').hidden=!(f.status==='done'&&f.out===OUTS[0]);$('cPrio').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===f.prio));
   const src=f.photo?(f.photo.url||(f.photo.id?'/_blob/'+f.photo.id:'')||f.photo.data):'';$('cImg').hidden=!src;if(src)$('cImg').src=src;$('cImgRm').hidden=!src;$('cImgLbl').textContent=src?'تغيير الصورة':'صوّر الكارت';
   const p=repPlan(),s=p&&p.stops[curIdx];if(f.conf&&s){const d=s.lat!=null&&f.conf.lat!=null?Math.round(km([s.lat,s.lng],[f.conf.lat,f.conf.lng])*1000):null;$('cLocTxt').innerHTML='تم التأكيد'+(d!=null?(d>300?' — <b style="color:#d2452f">على بعد '+d+' م من موقع العميل المسجّل</b>':' — على بعد '+d+' م من العميل'):(f.conf.lat!=null?' — هيتحفظ كموقع للعميل':''))}else $('cLocTxt').textContent=''}
+const waNum=p=>{let d=String(p||'').replace(/[^0-9]/g,'');if(!d)return'';if(d.startsWith('00'))d=d.slice(2);else if(d.startsWith('0'))d=(S.settings.cc||'966')+d.slice(1);else if(d.length<=9)d=(S.settings.cc||'966')+d;return d};
+const THK_DEF='شكرًا لك {client} على وقتك وزيارتنا اليوم 🌟 نسعد بخدمتك دائمًا. {rep}',OTP_DEF='رمز تأكيد زيارة {rep} اليوم: {code}\nمن فضلك أعطه للمندوب لتأكيد الزيارة. شكرًا لك.';
+const tpl=(t,o)=>t.replace(/\{(\w+)\}/g,(m,k)=>o[k]!=null?o[k]:m);
+const waOpen=(n,t)=>window.open('https://wa.me/'+n+'?text='+encodeURIComponent(t),'_blank');
+const sha=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(b=>b.toString(16).padStart(2,'0')).join('');
+function curStop(){const p=repPlan();return p&&curIdx>=0?{p,s:p.stops[curIdx]}:null}
+$('cOtpNeed').addEventListener('change',syncForm);
+$('cThank').addEventListener('click',()=>{const c=curStop();if(!c)return;const n=waNum(c.s.phone);if(!n){msg('cMsg','مفيش رقم تليفون للعميل',1);return}
+  waOpen(n,tpl(S.settings.thkTpl||THK_DEF,{client:c.s.name,rep:repName(c.p.rep)}));f.thanked=Date.now();syncForm()});
+$('cOtpSend').addEventListener('click',async()=>{const c=curStop();if(!c)return;const n=waNum(c.s.phone);if(!n){msg('cMsg','مفيش رقم تليفون للعميل',1);return}
+  const a=new Uint32Array(1);crypto.getRandomValues(a);const code=String(1000+a[0]%9000),salt=uid();
+  f.otp={need:true,salt,hash:await sha(salt+code),sentAt:Date.now(),verified:false,tries:0};
+  waOpen(n,tpl(S.settings.otpTpl||OTP_DEF,{client:c.s.name,rep:repName(c.p.rep),code}));$('cOtpIn').value='';syncForm()});
+$('cOtpChk').addEventListener('click',async()=>{const o=f.otp,v=$('cOtpIn').value.trim();if(!o||!o.hash){msg('cMsg','ابعت الرمز للعميل الأول',1);return}if(o.verified)return;
+  if(Date.now()-o.sentAt>600000){msg('cMsg','الرمز انتهت صلاحيته — ابعت رمز جديد',1);return}if((o.tries||0)>=5){msg('cMsg','محاولات كتير غلط — ابعت رمز جديد',1);return}
+  o.tries=(o.tries||0)+1;if(await sha(o.salt+v)===o.hash){o.verified=true;o.verifiedAt=Date.now();delete o.hash;delete o.salt;msg('cMsg','');syncForm()}else msg('cMsg','الرمز غلط ('+o.tries+'/5)',1)});
 $('cStatus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;f.status=b.dataset.v;if(f.status==='done')f.reason='';else f.out='';syncForm()});
 $('cOut').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;f.out=f.out===b.dataset.v?'':b.dataset.v;syncForm()});
 $('cPrio').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;f.prio=f.prio===b.dataset.v?'':b.dataset.v;syncForm()});
@@ -648,7 +686,8 @@ $('cImgRm').addEventListener('click',()=>{f.photo=null;syncForm()});
 $('cLocBtn').addEventListener('click',async()=>{$('cLocTxt').textContent='أحدد موقعك…';try{const h=await here();f.conf={lat:h[0],lng:h[1],acc:h[2],at:Date.now(),how:'gps'};syncForm()}catch{$('cLocTxt').textContent=geoFail}});
 $('cLocMan').addEventListener('input',()=>{const v=$('cLocMan').value.trim();if(!v)return;const c=coords(v);f.conf={lat:c?c[0]:null,lng:c?c[1]:null,text:v,at:Date.now(),how:'manual'};syncForm()});
 $('cSave').addEventListener('click',()=>{const p=repPlan();if(!p||curIdx<0)return;if(!f.status){msg('cMsg','اختر حالة الزيارة: تمت أو لم تتم',1);$('cStatus').scrollIntoView({block:'center',behavior:'smooth'});return}
-  const s=p.stops[curIdx];Object.assign(s,{status:f.status,reason:f.status==='notdone'?f.reason:'',outcome:f.status==='done'?f.out:'',prio:f.status==='done'&&f.out===OUTS[0]?(f.prio||''):'',meetOk:!!($('cNext').value&&$('cMeet').checked),notes:$('cNotes').value.trim(),next:$('cNext').value,nextTime:$('cNext').value?$('cNextTime').value:'',nextNote:$('cNext').value?$('cNextNote').value.trim():'',photo:f.photo,conf:f.conf,endAt:(f.editing&&s.endAt)?s.endAt:Date.now(),savedAt:Date.now()});
+  if(f.status==='done'&&$('cOtpNeed').checked&&!(f.otp&&f.otp.verified)){msg('cMsg','العميل طالب رمز تأكيد (OTP) — ابعت الرمز واكتبه واضغط تحقق، أو ألغِ خيار OTP',1);$('cOtpNeed').scrollIntoView({block:'center',behavior:'smooth'});return}
+  const s=p.stops[curIdx];Object.assign(s,{thanked:f.thanked||0,otp:$('cOtpNeed').checked||f.otp?{...(f.otp||{}),need:$('cOtpNeed').checked}:null,status:f.status,reason:f.status==='notdone'?f.reason:'',outcome:f.status==='done'?f.out:'',prio:f.status==='done'&&f.out===OUTS[0]?(f.prio||''):'',meetOk:!!($('cNext').value&&$('cMeet').checked),notes:$('cNotes').value.trim(),next:$('cNext').value,nextTime:$('cNext').value?$('cNextTime').value:'',nextNote:$('cNext').value?$('cNextNote').value.trim():'',photo:f.photo,conf:f.conf,endAt:(f.editing&&s.endAt)?s.endAt:Date.now(),savedAt:Date.now()});
   const c=clientById(s.cid);if(c){setFollow(c,p.rep,p.date,s);if(c.lat==null&&f.conf&&f.conf.lat!=null){c.lat=f.conf.lat;c.lng=f.conf.lng;s.lat=c.lat;s.lng=c.lng}putClient(c)}
   const name=s.name;f.editing=false;putPlan(p);const nx=nextPending(p,curIdx+1);loadStop(p,nx);renderRep();toast('تم حفظ زيارة '+name+(nx>=0?' — التالية: '+p.stops[nx].name:' — خلصت زيارات اليوم'));window.scrollTo({top:$('rCur').offsetTop-60,behavior:'smooth'})});
 $('rList').addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(!b)return;loadStop(repPlan(),+b.dataset.open);renderRep();window.scrollTo({top:$('rCur').offsetTop-60,behavior:'smooth'})});
@@ -699,7 +738,7 @@ function renderReport(){repOptions($('xRep'),true);$('xPer').querySelectorAll('b
   h+=opps.length?`<table class="ot"><thead><tr><th>م</th><th>العميل</th><th>الخطوة التالية</th></tr></thead><tbody>${opps.map((s,i)=>`<tr><td class="m">${i+1}</td><td class="nm">${esc(s.name)}${showRep?'<small>'+esc(repName(s.rep))+'</small>':''}${s.prio==='عالية'?'<span class="tag">الأقرب والأهم</span>':''}</td><td>${s.meetOk&&s.next?esc(s.nextNote||'اجتماع')+' مؤكد:<b class="when">'+esc(whenTxt(s))+'</b>':esc(s.nextNote||s.notes||'—')+(s.next?'<small>'+esc(whenTxt(s))+'</small>':'')}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">لا توجد فرص مفتوحة في هذه الفترة</div>';
   if(X.seen.length){const pl=planOf(X);h+=`<div class="callout"><b>${esc(pl.head)}</b>${pl.line?'<div>'+esc(pl.line)+'</div>':''}</div>`}
   {const tv=X.all.filter(s=>s.startAt).sort((a,b)=>(a.date<b.date?-1:a.date>b.date?1:a.startAt-b.startAt));
-    if(tv.length){let tm=0;h+=`<h2 class="sec">ملخص الزيارات والمدة</h2><table class="stack rt"><thead><tr><th>م</th><th>العميل</th>${showRep?'<th>المندوب</th>':''}<th>التاريخ</th><th>من</th><th>إلى</th><th>المدة</th></tr></thead><tbody>${tv.map((s,i)=>{const m=durMin(s.startAt,s.endAt);if(m)tm+=m;return `<tr><td data-l="م">${i+1}</td><td class="nm" data-l="العميل">${esc(s.name)}</td>${showRep?'<td data-l="المندوب">'+esc(repName(s.rep))+'</td>':''}<td data-l="التاريخ">${esc(s.date)}</td><td data-l="من">${hhmm(s.startAt)}</td><td data-l="إلى">${s.endAt?hhmm(s.endAt):'—'}</td><td data-l="المدة">${m?durTxt(m):'—'}</td></tr>`}).join('')}</tbody><tfoot><tr><td colspan="${showRep?5:4}"><b>إجمالي المدة</b></td><td colspan="2"><b>${durTxt(tm)||'—'} (${(tm/60).toFixed(2)} ساعة)</b></td></tr></tfoot></table>`}}
+    if(tv.length){let tm=0;h+=`<h2 class="sec">ملخص الزيارات والمدة</h2><table class="stack rt"><thead><tr><th>م</th><th>العميل</th>${showRep?'<th>المندوب</th>':''}<th>التاريخ</th><th>من</th><th>إلى</th><th>المدة</th><th>OTP</th></tr></thead><tbody>${tv.map((s,i)=>{const m=durMin(s.startAt,s.endAt);if(m)tm+=m;return `<tr><td data-l="م">${i+1}</td><td class="nm" data-l="العميل">${esc(s.name)}</td>${showRep?'<td data-l="المندوب">'+esc(repName(s.rep))+'</td>':''}<td data-l="التاريخ">${esc(s.date)}</td><td data-l="من">${hhmm(s.startAt)}</td><td data-l="إلى">${s.endAt?hhmm(s.endAt):'—'}</td><td data-l="المدة">${m?durTxt(m):'—'}</td><td data-l="OTP">${s.otp&&s.otp.need?(s.otp.verified?'✓ تم':'لم يتم'):'—'}</td></tr>`}).join('')}</tbody><tfoot><tr><td colspan="${showRep?5:4}"><b>إجمالي المدة</b></td><td colspan="3"><b>${durTxt(tm)||'—'} (${(tm/60).toFixed(2)} ساعة)</b></td></tr></tfoot></table>`}}
   if(showRep)h+=`<h2 class="sec">حسب المندوب</h2><table class="stack rt"><thead><tr><th>المندوب</th><th>الزيارات</th><th>فرص مفتوحة</th><th>تحتاج تأهيل</th><th>مغلقة</th><th>اجتماع مؤكد</th></tr></thead><tbody>${reps.map(r=>{const c=counts(X.seen.filter(s=>s.rep===r));return`<tr><td class="nm" data-l="المندوب">${esc(repName(r))}</td><td data-l="الزيارات">${c.n}</td><td data-l="فرص مفتوحة">${c.open}</td><td data-l="تحتاج تأهيل">${c.qual}</td><td data-l="مغلقة">${c.closed}</td><td data-l="اجتماع مؤكد">${c.meet}</td></tr>`}).join('')}</tbody></table>`;
   if(xAll&&X.seen.length)h+=`<h2 class="sec">كل الزيارات</h2><table class="stack rt"><thead><tr><th>العميل</th>${multiDay?'<th>اليوم</th>':''}${showRep?'<th>المندوب</th>':''}<th>الحالة</th><th>النتيجة</th></tr></thead><tbody>${X.seen.map(s=>`<tr><td class="nm" data-l="العميل">${esc(s.name)}${s.kind==='adhoc'?' <span class="chip gray">غير مجدولة</span>':''}</td>${multiDay?`<td data-l="اليوم">${esc(shortD(s.date))}</td>`:''}${showRep?`<td data-l="المندوب">${esc(repName(s.rep))}</td>`:''}<td data-l="الحالة">${statusChip(s)}</td><td data-l="النتيجة">${esc(resTxt(s))}</td></tr>`).join('')}</tbody></table>`;
   h+=`<p class="foot">الأولوية حسب تقييم المندوب، وليست توقعًا. الأرقام تشمل الزيارات الـ${k.n} كلها.${X.missed.length?' و'+X.missed.length+' زيارة مخططة لم تُزر'+(open_?' بعد':'')+'.':''}</p></div>`;
@@ -810,7 +849,9 @@ $('dAlerts').addEventListener('click',e=>{const v=e.target.closest('[data-dv]'),
 $('dAlerts').addEventListener('change',e=>{const s=e.target.closest('[data-dp]');if(!s||!s.value)return;const c=clientById(s.dataset.dp);if(!c)return;const nx=iso(addD(+s.value));putClient({...c,next:nx});toast('تأجيل متابعة '+c.name+' إلى '+fmt(nx))});
 
 /* ================= SETTINGS ================= */
-function renderSettings(){$('repList').innerHTML=S.settings.reps.length?S.settings.reps.map(r=>`<div class="item"><span class="n">${esc(r.name.trim()[0]||'؟')}</span><div><b>${esc(r.name)}</b><small dir="ltr" style="text-align:right">${esc(r.email||'')}</small></div><div class="acts"><button class="btn sm warn" data-rd="${esc(r.id)}">حذف</button></div></div>`).join(''):'<div class="empty">لا يوجد مناديب بعد</div>';
+function fillMsgs(){$('stCc').value=S.settings.cc||'966';$('stThk').value=S.settings.thkTpl||THK_DEF;$('stOtp').value=S.settings.otpTpl||OTP_DEF}
+[['stCc','cc'],['stThk','thkTpl'],['stOtp','otpTpl']].forEach(([i,k])=>$(i).addEventListener('change',()=>{S.settings[k]=$(i).value.trim();putSettings()}));
+function renderSettings(){fillMsgs();$('repList').innerHTML=S.settings.reps.length?S.settings.reps.map(r=>`<div class="item"><span class="n">${esc(r.name.trim()[0]||'؟')}</span><div><b>${esc(r.name)}</b><small dir="ltr" style="text-align:right">${esc(r.email||'')}</small></div><div class="acts"><button class="btn sm warn" data-rd="${esc(r.id)}">حذف</button></div></div>`).join(''):'<div class="empty">لا يوجد مناديب بعد</div>';
   if(document.activeElement&&!['sTo','sHook','sOffice','sTitle'].includes(document.activeElement.id)){$('sTitle').value=S.settings.title||'';$('sTo').value=S.settings.to||'';$('sHook').value=S.settings.hook||'';$('sOffice').value=S.settings.office||''}
   $('storeInfo').textContent=db?'البيانات محفوظة في السحابة ومشتركة بين كل من يفتح الصفحة بحسابه (المشرف والمناديب).':'البيانات محفوظة في هذا المتصفح فقط. لو المشرف والمناديب على أجهزة مختلفة، استخدموا الصفحة المنشورة على Claude أو انقلوا البيانات بالنسخة الاحتياطية.'}
 $('addRep').addEventListener('click',()=>{const n=$('nRep').value.trim();if(!n){toast('اكتب اسم المندوب',1);return}S.settings.reps.push({id:uid(),name:n,email:$('nRepMail').value.trim()});$('nRep').value='';$('nRepMail').value='';putSettings();toast('تمت إضافة '+n)});
@@ -901,14 +942,11 @@ function initLive(){if(!window.LF){toast('تعذّر تحميل الخريطة،
   if(!$('lvDate').value)$('lvDate').value=iso(today());
   const cv=$('lvRep').value;$('lvRep').innerHTML='<option value="*">كل المناديب</option>'+S.settings.reps.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');$('lvRep').value=cv||'*';$('lvTrk').checked=S.settings.track!==false;$('lvLim').value=S.settings.speedLimit||120;
   if(!LM){LM=LF.map('lvMap').setView([24.7136,46.6753],10);LF.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(LM);LL=LF.layerGroup().addTo(LM)}
-  setTimeout(()=>LM.invalidateSize(),150);loadLive();
-  clearInterval(LT);LT=setInterval(()=>{if(cur==='live'&&$('lvAuto').checked&&!document.hidden)loadLive()},30000)}
+  setTimeout(()=>LM.invalidateSize(),150);refreshLv();startLvTimer()}
 const hhmm=t=>new Date(t).toLocaleTimeString('ar',{hour:'2-digit',minute:'2-digit'});
 const gmaps=p=>'<br><a href="https://www.google.com/maps/dir/?api=1&destination='+p[0]+','+p[1]+'" target="_blank" rel="noopener" style="font-weight:700">📍 الذهاب للموقع</a> · <a href="https://www.google.com/maps/search/?api=1&query='+p[0]+','+p[1]+'" target="_blank" rel="noopener">عرض على الخرائط</a>';
 async function loadLive(){if(!LM)return;const d=$('lvDate').value||iso(today()),sel=$('lvRep').value;
   let rows=[];
-  if(S.settings.track!==false){const f=new Date(d+'T00:00:00'),t=new Date(f.getTime()+86400000);
-    try{rows=await api('GET','track?from='+encodeURIComponent(f.toISOString())+'&to='+encodeURIComponent(t.toISOString()))}catch(e){toast('تعذّر تحميل مسار GPS ('+(e&&e.status||'')+') '+(e&&e.text||''),1)}}
   const by={};rows.forEach(r=>{(by[r.rep]=by[r.rep]||[]).push(r)});
   LL.clearLayers();const all=[],list=[];
   S.settings.reps.forEach((rp,i)=>{if(sel!=='*'&&sel!==rp.id)return;const col=LCOL[i%LCOL.length];
@@ -942,13 +980,41 @@ async function loadLive(){if(!LM)return;const d=$('lvDate').value||iso(today()),
     list.push(`<div class="item"><span class="n" style="background:${col}">${esc(rp.name.trim()[0]||'؟')}</span><div><b>${esc(rp.name)}</b><small>${done.length} من ${total} زيارة${total?'':' — لا توجد خطة أو زيارات في هذا اليوم'}${doneLL.length>1?' · المسافة بين الزيارات حوالي '+dist.toFixed(1)+' كم':''}${onsite?' · الوقت داخل الزيارات '+durTxt(onsite):''}${miss?' · '+miss+' بدون إحداثيات':''}${lines.length?'<br>'+lines.join('<br>'):''}</small></div></div>`)});
   $('lvList').innerHTML=list.join('')||'<div class="empty">لا يوجد مناديب</div>';
   if(all.length&&!LM._fitDone){LM.fitBounds(all,{padding:[30,30],maxZoom:16});LM._fitDone=1}}
-$('lvLim').addEventListener('change',()=>{S.settings.speedLimit=Math.max(30,+$('lvLim').value||120);putSettings();loadLive()});
-$('lvTrk').addEventListener('change',()=>{S.settings.track=$('lvTrk').checked;putSettings();loadLive()});
-$('lvRef').addEventListener('click',()=>{LM&&(LM._fitDone=0);loadLive()});$('lvDate').addEventListener('change',()=>{LM&&(LM._fitDone=0);loadLive()});$('lvRep').addEventListener('change',()=>{LM&&(LM._fitDone=0);loadLive()});
+
+let lvMode='visits',LV={};
+function startLvTimer(){clearInterval(LT);LT=setInterval(()=>{if(cur==='live'&&$('lvAuto').checked&&!document.hidden)refreshLv()},lvMode==='live'?5000:30000)}
+function refreshLv(){lvMode==='live'?loadNow():loadLive()}
+function setLvMode(m){lvMode=m;$('lvMode').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===m));
+  $('lvDateF').hidden=m==='live';$('lvLiveOpts').hidden=m!=='live';$('lvVisHint').hidden=m==='live';$('lvLiveHint').hidden=m!=='live';
+  if(LL)LL.clearLayers();LV={};if(LM)LM._fitDone=0;startLvTimer();refreshLv()}
+$('lvMode').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.dataset.v!==lvMode)setLvMode(b.dataset.v)});
+const agoTxt=s=>s<10?'الآن':s<60?'منذ '+Math.round(s)+' ث':s<3600?'منذ '+Math.round(s/60)+' د':'منذ '+Math.round(s/3600)+' س';
+async function loadNow(){if(!LM)return;const sel=$('lvRep').value;let rows=[];
+  try{const t=Date.now();rows=await api('GET','track?from='+encodeURIComponent(new Date(t-30*60000).toISOString())+'&to='+encodeURIComponent(new Date(t+120000).toISOString()))}catch(e){return}
+  const by={};rows.forEach(r=>{(by[r.rep]=by[r.rep]||[]).push(r)});
+  const LIM=S.settings.speedLimit||120,list=[],pts=[];let lastPos=null;
+  S.settings.reps.forEach((rp,i)=>{if(sel!=='*'&&sel!==rp.id)return;const col=LCOL[i%LCOL.length],g=by[rp.id]||[],o=LV[rp.id];
+    if(!g.length){if(o){LL.removeLayer(o.m);LL.removeLayer(o.t);delete LV[rp.id]}list.push(`<div class="item"><span class="n" style="background:#94a3b8">${esc(rp.name.trim()[0]||'؟')}</span><div><b>${esc(rp.name)}</b><small>⚫ غير متصل — لا توجد بيانات تتبع في آخر ٣٠ دقيقة</small></div></div>`);return}
+    g.forEach((p,k)=>{let v=p.speed;if(v==null&&k){const q=g[k-1],dt=(new Date(p.t)-new Date(q.t))/1000;if(dt>0&&dt<=300)v=km([q.lat,q.lng],[p.lat,p.lng])/dt*3600}p._v=v==null?0:v});
+    const lp=g[g.length-1],age=(Date.now()-new Date(lp.t))/1000,v=lp._v,pos=[lp.lat,lp.lng];
+    const st=age>180?'off':v>=5?'move':'stop',stTxt=st==='off'?'⚫ غير متصل':st==='move'?'🟡 متحرك '+Math.round(v)+' كم/س':'⚪ متوقف';
+    const icon=LF.divIcon({className:'',iconSize:[20,20],iconAnchor:[10,10],html:`<div class="lvdot ${st}"><i></i><b>${esc(rp.name)}</b></div>`});
+    const pop='<b>'+esc(rp.name)+'</b><br>'+stTxt+'<br>آخر تحديث '+hhmm(lp.t)+' ('+agoTxt(age)+')'+gmaps(pos);
+    const ll=g.map(p=>[p.lat,p.lng]);
+    if(o){o.m.setLatLng(pos).setIcon(icon).setPopupContent(pop);o.t.setLatLngs(ll)}
+    else{const t=LF.polyline(ll,{color:col,weight:4,opacity:.7}).addTo(LL),m=LF.marker(pos,{icon,zIndexOffset:1000}).addTo(LL).bindPopup(pop);LV[rp.id]={m,t}}
+    pts.push(pos);lastPos=pos;const vmax=Math.max(...g.map(p=>p._v));
+    list.push(`<div class="item" data-focus="${esc(rp.id)}" style="cursor:pointer"><span class="n" style="background:${col}">${esc(rp.name.trim()[0]||'؟')}</span><div><b>${esc(rp.name)}</b><small>${stTxt} · آخر تحديث ${agoTxt(age)} · أقصى سرعة (٣٠ د) ${Math.round(vmax)} كم/س${vmax>LIM?' <span style="color:#dc2626;font-weight:700">⚠ فوق '+LIM+'</span>':''}${lp.acc?' · دقة '+Math.round(lp.acc)+' م':''}</small></div><div class="acts"><a class="btn sm" href="https://www.google.com/maps/dir/?api=1&destination=${pos[0]},${pos[1]}" target="_blank" rel="noopener">اذهب للموقع</a></div></div>`)});
+  $('lvList').innerHTML=list.join('')||'<div class="empty">لا يوجد مناديب</div>';
+  if(sel!=='*'&&lastPos)LM.panTo(lastPos);else if(pts.length&&!LM._fitDone){LM.fitBounds(pts,{padding:[40,40],maxZoom:16});LM._fitDone=1}}
+$('lvList').addEventListener('click',e=>{const f=e.target.closest('[data-focus]');if(!f||e.target.closest('a'))return;const o=LV[f.dataset.focus];if(o){LM.setView(o.m.getLatLng(),16);o.m.openPopup()}});
+$('lvLim').addEventListener('change',()=>{S.settings.speedLimit=Math.max(30,+$('lvLim').value||120);putSettings();refreshLv()});
+$('lvTrk').addEventListener('change',()=>{S.settings.track=$('lvTrk').checked;putSettings();refreshLv()});
+$('lvRef').addEventListener('click',()=>{LM&&(LM._fitDone=0);refreshLv()});$('lvDate').addEventListener('change',()=>{LM&&(LM._fitDone=0);refreshLv()});$('lvRep').addEventListener('change',()=>{LM&&(LM._fitDone=0);refreshLv()});
 function startTracking(){if(S.settings.track===false||!navigator.geolocation||ME.role!=='rep'||window.__trk)return;window.__trk=1;let last=0,lp=null,lt=0;
   const dist=(a,b)=>{const R=6371000,r=x=>x*Math.PI/180,dl=r(b.latitude-a.latitude),dn=r(b.longitude-a.longitude),q=Math.sin(dl/2)**2+Math.cos(r(a.latitude))*Math.cos(r(b.latitude))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(q))};
-  navigator.geolocation.watchPosition(p=>{const c=p.coords,n=Date.now();if(n-last<20000)return;if(n-last<60000&&lp&&dist(lp,c)<100)return;let sp=c.speed!=null&&c.speed>=0?c.speed*3.6:(lp&&lt&&n>lt?dist(lp,c)/((n-lt)/1000)*3.6:null);last=n;lt=n;lp={latitude:c.latitude,longitude:c.longitude};
-    api('POST','track',{lat:c.latitude,lng:c.longitude,acc:c.accuracy,speed:sp!=null?Math.round(sp*10)/10:null}).then(()=>{$('trkInd').hidden=false}).catch(()=>{})},()=>{},{enableHighAccuracy:true,maximumAge:30000,timeout:30000})}
+  navigator.geolocation.watchPosition(p=>{const c=p.coords,n=Date.now();if(n-last<5000)return;if(n-last<30000&&lp&&dist(lp,c)<8)return;let sp=c.speed!=null&&c.speed>=0?c.speed*3.6:(lp&&lt&&n>lt?dist(lp,c)/((n-lt)/1000)*3.6:null);last=n;lt=n;lp={latitude:c.latitude,longitude:c.longitude};
+    api('POST','track',{lat:c.latitude,lng:c.longitude,acc:c.accuracy,speed:sp!=null?Math.round(sp*10)/10:null}).then(()=>{$('trkInd').hidden=false}).catch(()=>{})},()=>{},{enableHighAccuracy:true,maximumAge:0,timeout:30000})}
 let USERS=[];async function loadUsers(){try{USERS=await api('GET','users');renderUsers()}catch{}}
 function renderUsers(){const m={};USERS.forEach(u=>m[u.repId]=u);const T=S.settings.teams||[];
   $('uList').innerHTML=S.settings.reps.length?S.settings.reps.map(r=>{const u=m[r.id];return `<div class="item"><span class="n">${esc(r.name.trim()[0]||'؟')}</span><div><b>${esc(r.name)}</b><small dir="auto">${u?'يوزر: '+esc(u.username)+(u.active?'':' (موقوف)'):'بدون حساب'}</small></div><div class="acts"><select data-team="${esc(r.id)}"><option value="">بدون فريق</option>${T.map(x=>`<option value="${esc(x.id)}"${r.team===x.id?' selected':''}>${esc(x.name)}</option>`).join('')}</select><button class="btn sm" data-acc="${esc(r.id)}">${u?'تعديل الحساب':'إنشاء حساب'}</button>${u?`<button class="btn sm warn" data-tog="${esc(r.id)}">${u.active?'إيقاف':'تفعيل'}</button>`:''}</div></div>`}).join(''):'<div class="empty">أضف مندوب أولاً</div>'}
