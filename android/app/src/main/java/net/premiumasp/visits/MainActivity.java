@@ -24,12 +24,19 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setGeolocationEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
+        s.setSupportMultipleWindows(false);
+        s.setJavaScriptCanOpenWindowsAutomatically(true);
         // يشبه Chrome العادي (بعض الاستضافات بتقفل الاتصال لو شافت WebView)
         s.setUserAgentString(s.getUserAgentString().replace("; wv", "").replaceAll("Version/[0-9.]+ ", ""));
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 if ("openext".equals(r.getUrl().getScheme())) {
                     try { startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(URL))); } catch (Exception ignored) {}
+                    return true;
+                }
+                String h = r.getUrl().getHost();
+                if (h != null && !h.endsWith("premiumasp.net") && !h.endsWith("openstreetmap.org") && !h.endsWith("cloudflare.com")) {
+                    try { startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, r.getUrl())); } catch (Exception ignored) {}
                     return true;
                 }
                 return false;
